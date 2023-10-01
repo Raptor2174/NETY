@@ -9,7 +9,7 @@ Membres de l'Équipe : meuneur du projet : Raptor_ (proprietair de NETY)
 
 Contexte : ce projet intervient aussi dans un contecte de "course a l'ia" qui semble fair fair beaucoup parler de lui 
 
-Étapes du Projet :  1 : structurer le projet et la dase des dosier pour visualiser les diferant composent et modules qui viendron s'ajouter par la suit de facon a bient visualiser le tout dans sont ensemble 
+Étapes du Projet :  1 : structurer le projet et la dase des dossier pour visualiser les diferant composent et modules qui viendron s'ajouter par la suit de facon a bient visualiser le tout dans sont ensemble 
                     2 : comencer a crée les premier module essentiel au premiere fase de develaupement de l'ia
                     3 : entainer l'ia avec les données d'entraînement
                     4 : evaluer les performence de l'ia 
