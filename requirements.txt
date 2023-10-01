@@ -1,0 +1,15 @@
+
+-spacy 
+import spacy
+
+-pytorch
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
+
+-pyttsx3
+pip install pyttsx3
+
+-tkinter
+from tkinter import *
+from tkinter import ttk
+
+
