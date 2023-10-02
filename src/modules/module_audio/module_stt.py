@@ -1,30 +1,49 @@
 import torch
+import torchaudio 
 import torch.nn as nn
+from torchsummary import summary
 
+# Définition du modèle STT
 class ModeleSTT(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size):
+    def __init__(self, input_dim, hidden_dim, output_dim):
         super(ModeleSTT, self).__init__()
-        # Définissez les couches et les opérations spécifiques à votre modèle STT ici
         
-        # Couches récurrentes (LSTM) pour la séquence audio
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers=2, batch_first=True)
-        
-        # Couche de sortie pour la prédiction des caractères
-        self.output_layer = nn.Linear(hidden_size, output_size)
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=2, batch_first=True)
+        self.output_layer = nn.Linear(hidden_dim, output_dim)
         
     def forward(self, x):
-        # Spécifiez comment les données audio sont propagées à travers votre modèle STT
-        
-        # Propagation avant à travers les couches LSTM
         lstm_out, _ = self.lstm(x)
-        
-        # Utilisation de la dernière sortie de la séquence pour la prédiction
         predictions = self.output_layer(lstm_out[:, -1, :])
         return predictions
 
-# Créez une instance de votre modèle STT avec des paramètres spécifiques
-modele_stt = ModeleSTT(input_size=..., hidden_size=..., output_size=...)
+# Fonction pour charger des données audio
+def charger_audio(chemin_fichier_audio):
+    waveform, sample_rate = torchaudio.load(chemin_fichier_audio)
+    return waveform, sample_rate
 
-print(modele_stt)
+# Fonction pour prétraiter les données audio
+def pretraiter_audio(waveform):
+    # Appliquer un prétraitement audio si nécessaire (normalisation, etc.)
+    return waveform
 
-# Vous pouvez également charger un modèle pré-entraîné ici si nécessaire
+# Fonction pour effectuer la reconnaissance vocale
+def reconnaissance_vocale(modele, waveform):
+    with torch.no_grad():
+        output = modele(waveform)
+    return output
+
+if __name__ == "__main__":
+    # Exemple d'utilisation du module STT
+    chemin_fichier_audio = "chemin/vers/votre/audio.wav"
+    waveform, sample_rate = charger_audio(chemin_fichier_audio)
+    waveform = pretraiter_audio(waveform)
+    
+    # Initialisation et affichage de la structure du modèle STT
+    modele_stt = ModeleSTT(input_dim=waveform.shape[1], hidden_dim=256, output_dim=nombre_classes)
+    summary(modele_stt, input_size=(waveform.shape[1], waveform.shape[2]))
+    
+    # Reconnaissance vocale
+    predictions = reconnaissance_vocale(modele_stt, waveform)
+    
+    print("Résultats de la reconnaissance vocale :")
+    print(predictions)
