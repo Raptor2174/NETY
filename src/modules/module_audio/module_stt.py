@@ -22,6 +22,6 @@ class ModeleSTT(nn.Module):
 # Créez une instance de votre modèle STT avec des paramètres spécifiques
 modele_stt = ModeleSTT(input_size=..., output_size=...)
 
-
+print(modele_stt)
 
 # Vous pouvez également charger un modèle pré-entraîné ici si nécessaire
