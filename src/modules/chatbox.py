@@ -1,6 +1,12 @@
 from src.modules.module_text.modele_rnn import ModeleRNN
 from src.modules.module_image.modele_cnn import ModeleCNN
 from src.modules.module_audio.module_stt import ModeleSTT
+from module_text.preprocessing import preprocess_input
+from module_image.modele_cnn import ModeleCNN
+from module_audio.module_stt import ModeleSTT
+from module_text.postprocessing import postprocess_output
+
+
 
 def generer_reponse(entree_utilisateur, modele_texte, modele_image, modele_audio):
     # Prétraitez l'entrée utilisateur si nécessaire
