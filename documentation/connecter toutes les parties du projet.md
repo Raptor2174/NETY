@@ -40,3 +40,5 @@ Projet_NETY_IA/
 Assurez-vous d'importer correctement les modules et les fonctions nécessaires entre ces fichiers pour permettre une communication efficace entre eux. Par exemple, vous devrez importer les modèles définis dans `modele_rnn.py` et `modele_cnn.py` dans `chatbox.py` pour les utiliser dans la génération de réponses.
 
 De plus, n'oubliez pas de gérer les erreurs et les exceptions, ainsi que de fournir une interface utilisateur conviviale pour interagir avec votre chatbox. La structure de votre projet peut évoluer en fonction des besoins spécifiques de votre application, mais cet exemple vous donne une base solide pour commencer.
+
+by chatgpt 3
