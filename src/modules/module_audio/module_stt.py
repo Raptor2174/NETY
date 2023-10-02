@@ -1,3 +1,4 @@
+import os
 import torch
 import torchaudio 
 import torch.nn as nn
@@ -34,12 +35,12 @@ def reconnaissance_vocale(modele, waveform):
 
 if __name__ == "__main__":
     # Exemple d'utilisation du module STT
-    chemin_fichier_audio = "chemin/vers/votre/audio.wav"
+    chemin_fichier_audio = "data/audio/Lomepal_-_Decrescendo__Acapella__voicemyai_inferenced.wav"
     waveform, sample_rate = charger_audio(chemin_fichier_audio)
     waveform = pretraiter_audio(waveform)
     
     # Initialisation et affichage de la structure du modèle STT
-    modele_stt = ModeleSTT(input_dim=waveform.shape[1], hidden_dim=256, output_dim=nombre_classes)
+    modele_stt = ModeleSTT(input_dim=waveform.shape[1], hidden_dim=256, output_dim=26)
     summary(modele_stt, input_size=(waveform.shape[1], waveform.shape[2]))
     
     # Reconnaissance vocale

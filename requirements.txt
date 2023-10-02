@@ -15,4 +15,8 @@ from tkinter import ttk
 -torchsummary 
 pip install torchsummary 
 
+-torchaudio
+pip install torchaudio
+
+
 
