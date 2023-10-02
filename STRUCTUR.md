@@ -30,8 +30,7 @@ README.md : Un fichier README décrivant brièvement votre projet, comment l'ins
 
 LICENSE : Vous devriez choisir une licence pour votre projet, déterminant comment les autres peuvent l'utiliser. Les licences open source courantes incluent MIT, Apache, et GPL.
 
-
-    suite avec les diferant modules qui vienne se rajouter
+    -suite avec les diferant modules qui vienne se rajouter
 
 Merci d'avoir partagé les détails sur les modules que vous souhaitez ajouter à votre projet NETY IA. Voici comment vous pourriez les intégrer dans la structure de votre projet existante :
 
@@ -50,5 +49,17 @@ Merci d'avoir partagé les détails sur les modules que vous souhaitez ajouter �
 Une fois que vous avez intégré ces modules dans la structure du projet, assurez-vous de mettre à jour la documentation du projet pour inclure des instructions sur leur utilisation et leurs dépendances. Cela aidera les futurs développeurs et utilisateurs de votre IA à comprendre comment ces modules sont intégrés et fonctionnent.
 
 N'hésitez pas à me poser des questions supplémentaires ou à demander de l'aide pour des étapes spécifiques lors de l'intégration de ces modules.
+
+    -repertoir modele reseau de neuron
+
+Projet_NETY_IA/
+|-- src/
+    |-- modules/
+        |-- module_texte/
+            |-- modele_rnn.py  # Réseau de neurones pour le texte
+        |-- module_image/
+            |-- modele_cnn.py  # Réseau de neurones pour les images
+
+
 
 by chatgpt 3 
