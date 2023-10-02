@@ -18,5 +18,10 @@ pip install torchsummary
 -torchaudio
 pip install torchaudio
 
+-PortAudio
+instalation inconu
+
+-PyAudio
+pip install PyAudio
 
 
