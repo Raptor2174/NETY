@@ -98,5 +98,47 @@ N'oubliez pas de documenter votre code au fur et à mesure que vous avancez, car
 
 Si vous avez besoin d'aide pour des tâches spécifiques ou si vous avez d'autres questions concernant le développement de votre projet, n'hésitez pas à demander. Je suis là pour vous aider à chaque étape du processus !
 
+---separation---
+
+Je comprends mieux maintenant. Si vous ne disposez pas encore de fichiers spécifiques de prétraitement (`preprocessing`) et de post-traitement (`postprocessing`), voici comment vous pourriez organiser la structure de votre projet pour les inclure à l'avenir :
+
+```
+Projet_NETY_IA/
+|-- data/
+|   |-- raw/
+|   |-- processed/
+|-- models/
+|-- notebooks/
+|-- src/
+|   |-- modules/
+|   |   |-- module_text/
+|   |   |   |-- modele_rnn.py
+|   |   |-- module_image/
+|   |   |   |-- modele_cnn.py
+|   |   |-- module_audio/
+|   |   |   |-- modele_stt.py
+|   |-- preprocessing/
+|   |   |-- text_preprocessing.py
+|   |   |-- image_preprocessing.py
+|   |   |-- audio_preprocessing.py
+|   |-- postprocessing/
+|   |   |-- text_postprocessing.py
+|   |   |-- image_postprocessing.py
+|   |   |-- audio_postprocessing.py
+|-- tests/
+|-- documentation/
+|-- requirements.txt
+|-- README.md
+|-- LICENSE
+```
+
+Dans cette structure :
+
+- Les fichiers de prétraitement spécifiques à chaque type de données (texte, image, audio) sont placés dans le répertoire `src/preprocessing/`. Vous pouvez créer ces fichiers (`text_preprocessing.py`, `image_preprocessing.py`, `audio_preprocessing.py`) pour y ajouter les fonctions de prétraitement spécifiques à chaque type de données lorsque vous en aurez besoin.
+
+- Les fichiers de post-traitement spécifiques à chaque type de données (texte, image, audio) sont placés dans le répertoire `src/postprocessing/`. Vous pouvez également créer ces fichiers (`text_postprocessing.py`, `image_postprocessing.py`, `audio_postprocessing.py`) pour y ajouter les fonctions de post-traitement spécifiques à chaque type de données lorsque vous en aurez besoin.
+
+En utilisant cette structure, vous pouvez facilement ajouter des fonctions de prétraitement et de post-traitement spécifiques à chaque type de données au fur et à mesure que vous développez votre projet. Lorsque vous les créez, assurez-vous d'importer ces fonctions dans votre script principal (`chatbox.py`) pour les utiliser selon les besoins.
+
 
 by chatgpt 3 
