@@ -3,9 +3,9 @@ import torch
 import torch.nn as nn
 
 # Définir une classe pour le modèle
-class MonReseauDeNeurones(nn.Module):
-    def __init__(self):
-        super(MonReseauDeNeurones, self).__init__()
+class ModeleRNN(nn.Module):
+    def __init__(self, input_size, hidden_size, output_size):
+        super(ModeleRNN, self).__init__()
         
         # Couche d'entrée
         self.input_layer = nn.Linear(in_features=10, out_features=64)  # Exemple : 10 entrées, 64 sorties
@@ -31,7 +31,7 @@ class MonReseauDeNeurones(nn.Module):
         return x
 
 # Créer une instance du modèle
-modele = MonReseauDeNeurones()
+modele_rnn = ModeleRNN(input_size=..., hidden_size=..., output_size=...)
 
 # Afficher la structure du modèle
-print(modele)
+print(modele_rnn)
