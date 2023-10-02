@@ -62,4 +62,12 @@ Projet_NETY_IA/
 
 
 
+Réseau de Neurones pour l'Analyse de Texte Oral (Speech-to-Text - STT) :
+
+Pour l'analyse de texte oral, vous aurez besoin d'un modèle qui convertit la parole en texte. Vous pouvez utiliser des bibliothèques telles que SpeechRecognition et des modèles pré-entraînés pour cette tâche.
+Intégrez ce modèle dans votre module de traitement de texte ou créez un sous-répertoire dédié (par exemple, src/modules/module_texte/stt/) pour le STT.
+
+
+
+
 by chatgpt 3 
