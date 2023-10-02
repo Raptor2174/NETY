@@ -1,10 +1,10 @@
 from src.modules.module_text.modele_rnn import ModeleRNN
 from src.modules.module_image.modele_cnn import ModeleCNN
 from src.modules.module_audio.module_stt import ModeleSTT
-from module_text.preprocessing import preprocess_input
+from preprocessing.text_preprocessing import preprocess_input
 from module_image.modele_cnn import ModeleCNN
 from module_audio.module_stt import ModeleSTT
-from module_text.postprocessing import postprocess_output
+from postprocessing.text_postprocessing import postprocess_output
 
 
 
