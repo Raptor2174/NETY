@@ -13,6 +13,9 @@ pip install pyttsx3
 
 -tkinter
 
+-torch
+pip install torch
+
 -torchsummary 
 pip install torchsummary 
 
