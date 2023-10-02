@@ -31,7 +31,7 @@ class ModeleRNN(nn.Module):
         return x
 
 # Créer une instance du modèle
-modele_rnn = ModeleRNN(input_size=..., hidden_size=..., output_size=...)
+modele_rnn = ModeleRNN(input_size=10, hidden_size=64, output_size=1)
 
 # Afficher la structure du modèle
 print(modele_rnn)
