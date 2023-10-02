@@ -4,6 +4,7 @@ import torch.nn as nn
 class ModeleSTT(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
         super(ModeleSTT, self).__init__()
+        # Définissez les couches et les opérations spécifiques à votre modèle STT ici
         
         # Couches récurrentes (LSTM) pour la séquence audio
         self.lstm = nn.LSTM(input_size, hidden_size, num_layers=2, batch_first=True)
@@ -12,6 +13,8 @@ class ModeleSTT(nn.Module):
         self.output_layer = nn.Linear(hidden_size, output_size)
         
     def forward(self, x):
+        # Spécifiez comment les données audio sont propagées à travers votre modèle STT
+        
         # Propagation avant à travers les couches LSTM
         lstm_out, _ = self.lstm(x)
         
@@ -20,7 +23,7 @@ class ModeleSTT(nn.Module):
         return predictions
 
 # Créez une instance de votre modèle STT avec des paramètres spécifiques
-modele_stt = ModeleSTT(input_size=..., output_size=...)
+modele_stt = ModeleSTT(input_size=..., hidden_size=..., output_size=...)
 
 print(modele_stt)
 
