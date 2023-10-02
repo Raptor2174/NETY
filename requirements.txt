@@ -1,16 +1,17 @@
 
 -spacy 
-import spacy
+pip install spacy
 
 -pytorch
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
+
+-CUBA
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117 
 
 -pyttsx3
 pip install pyttsx3
 
 -tkinter
-from tkinter import *
-from tkinter import ttk
 
 -torchsummary 
 pip install torchsummary 

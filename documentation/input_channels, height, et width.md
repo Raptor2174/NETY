@@ -31,3 +31,5 @@ class ModeleRNN(nn.Module):
 Dans cet exemple, `input_channels` est défini à 1, ce qui signifie que le modèle attend une entrée unicanale (par exemple, un signal audio mono). `input_height` et `input_width` sont définis comme des valeurs spécifiques pour la hauteur et la largeur de l'entrée, mais vous devrez les adapter en fonction des dimensions réelles de vos données d'entrée.
 
 Assurez-vous que ces valeurs correspondent aux dimensions de vos données d'entrée. Cela vous aidera à garder une trace claire de ce que le modèle attend comme entrée et à éviter les erreurs de dimension lors de la préparation des données d'entrée pour l'inférence.
+
+by gpt 3

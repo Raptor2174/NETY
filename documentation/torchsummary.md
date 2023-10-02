@@ -67,3 +67,5 @@ from torchsummary import summary
 5. Assurez-vous que vous appelez `summary` avec le modèle et les valeurs d'entrée corrects.
 
 Si vous continuez à rencontrer des problèmes, veuillez fournir plus de détails sur l'erreur spécifique que vous obtenez, cela aidera à diagnostiquer le problème plus précisément.
+
+by gtp 3
