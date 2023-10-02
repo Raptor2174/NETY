@@ -108,3 +108,66 @@ class ModeleSTT(nn.Module):
 Dans ce modèle, la fonction d'activation ReLU n'est pas explicitement utilisée, car les LSTM gèrent la non-linéarité de manière interne. Les modèles de STT se concentrent davantage sur la modélisation des séquences audio et la prédiction des caractères/texte à partir de ces séquences.
 
 Vous devrez adapter le modèle STT en fonction de vos besoins spécifiques, en ajustant notamment la structure des couches récurrentes et des couches de sortie pour répondre à votre tâche de reconnaissance vocale particulière.
+
+---separation---
+
+Je suis désolé, mais je n'ai pas partagé précédemment un code complet pour `module_stt.py`. Cependant, je peux vous donner un exemple de structure de base pour un module de reconnaissance vocale (STT) en utilisant la bibliothèque `torchaudio` de PyTorch. Vous devrez personnaliser ce code en fonction de vos besoins spécifiques et de votre modèle de STT :
+
+```python
+import torch
+import torchaudio
+import torch.nn as nn
+from torchsummary import summary
+
+# Définition du modèle STT
+class ModeleSTT(nn.Module):
+    def __init__(self, input_dim, hidden_dim, output_dim):
+        super(ModeleSTT, self).__init__()
+        
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=2, batch_first=True)
+        self.output_layer = nn.Linear(hidden_dim, output_dim)
+        
+    def forward(self, x):
+        lstm_out, _ = self.lstm(x)
+        predictions = self.output_layer(lstm_out[:, -1, :])
+        return predictions
+
+# Fonction pour charger des données audio
+def charger_audio(chemin_fichier_audio):
+    waveform, sample_rate = torchaudio.load(chemin_fichier_audio)
+    return waveform, sample_rate
+
+# Fonction pour prétraiter les données audio
+def pretraiter_audio(waveform):
+    # Appliquer un prétraitement audio si nécessaire (normalisation, etc.)
+    return waveform
+
+# Fonction pour effectuer la reconnaissance vocale
+def reconnaissance_vocale(modele, waveform):
+    with torch.no_grad():
+        output = modele(waveform)
+    return output
+
+if __name__ == "__main__":
+    # Exemple d'utilisation du module STT
+    chemin_fichier_audio = "chemin/vers/votre/audio.wav"
+    waveform, sample_rate = charger_audio(chemin_fichier_audio)
+    waveform = pretraiter_audio(waveform)
+    
+    # Initialisation et affichage de la structure du modèle STT
+    modele_stt = ModeleSTT(input_dim=waveform.shape[1], hidden_dim=256, output_dim=nombre_classes)
+    summary(modele_stt, input_size=(waveform.shape[1], waveform.shape[2]))
+    
+    # Reconnaissance vocale
+    predictions = reconnaissance_vocale(modele_stt, waveform)
+    
+    print("Résultats de la reconnaissance vocale :")
+    print(predictions)
+```
+
+Ce code est une structure de base pour un module de reconnaissance vocale en utilisant PyTorch et `torchaudio`. Vous devrez adapter les dimensions, les prétraitements et le modèle en fonction de vos besoins spécifiques.
+
+N'hésitez pas à le personnaliser davantage pour répondre à vos besoins et à me poser des questions spécifiques si vous rencontrez des problèmes lors de l'implémentation de votre module STT.
+
+---separation---
+
