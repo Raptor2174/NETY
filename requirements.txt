@@ -13,5 +13,6 @@ from tkinter import *
 from tkinter import ttk
 
 -torchsummary 
-pip install torchsummary
+pip install torchsummary 
+
 
