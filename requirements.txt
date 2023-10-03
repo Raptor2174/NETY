@@ -1,3 +1,12 @@
+-version
+
+python --version
+Python 3.11.5
+
+pip -V
+pip 23.2.1
+
+
 
 -spacy 
 pip install spacy
@@ -12,6 +21,7 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 pip install pyttsx3
 
 -tkinter
+pip install tk
 
 -torch
 pip install torch
@@ -26,9 +36,13 @@ pip install torchaudio
 pip install torchtext
 
 -PortAudio
-instalation inconu
+instalation sur site 
 
 -PyAudio
 pip install PyAudio
+
+-notebooks Jupyter
+pip install jupyter
+
 
 
