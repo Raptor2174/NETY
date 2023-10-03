@@ -5,6 +5,7 @@ from torchtext.vocab import build_vocab_from_iterator
 from torch.nn.utils.rnn import pad_sequence
 import spacy
 import string
+import os
 
 # Utilisez le modèle de langue spaCy pour le prétraitement (assurez-vous de l'installer)
 # Charger le modèle de langue français
