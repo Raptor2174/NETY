@@ -40,6 +40,8 @@ instalation sur site
 
 -PyAudio
 pip install PyAudio
+ou
+pip3 install pyaudio
 
 -notebooks Jupyter
 pip install jupyter
