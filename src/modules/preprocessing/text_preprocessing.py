@@ -11,7 +11,7 @@ import string
 nlp = spacy.load("fr_core_news_sm")
 
 # Fonction pour le prétraitement d'une seule phrase
-def preprocess_text(text):
+def preprocess_input(text):
     # Utilisez spaCy pour tokeniser et prétraiter le texte
     tokens = [token.text.lower() for token in nlp(text) if token.text not in string.punctuation]
     return tokens
@@ -28,14 +28,14 @@ class TextDataset(Dataset):
     def __getitem__(self, idx):
         text = self.data[idx]
         # Tokenisez et convertissez le texte en indices de vocabulaire
-        tokens = preprocess_text(text)
+        tokens = preprocess_input(text)
         text_indices = [self.vocab[token] for token in tokens]
         return torch.tensor(text_indices)
 
 # Fonction pour créer un DataLoader pour le texte
 def create_text_loader(data, batch_size=32):
     # Créez un vocabulaire à partir des données
-    vocab = build_vocab_from_iterator(preprocess_text(text) for text in data)
+    vocab = build_vocab_from_iterator(preprocess_input(text) for text in data)
     # Créez un jeu de données personnalisé
     dataset = TextDataset(data, vocab)
     # Utilisez un DataLoader pour gérer les mini-lots
