@@ -7,6 +7,7 @@ import spacy
 import string
 
 # Utilisez le modèle de langue spaCy pour le prétraitement (assurez-vous de l'installer)
+# Charger le modèle de langue français
 nlp = spacy.load("fr_core_news_sm")
 
 # Fonction pour le prétraitement d'une seule phrase
