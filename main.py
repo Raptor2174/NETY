@@ -3,6 +3,9 @@ from src.modules.module_text.modele_rnn import ModeleRNN
 from src.modules.module_image.modele_cnn import ModeleCNN
 from src.modules.module_audio.module_stt import ModeleSTT
 from src.modules.chatbox import generer_reponse
+import sys
+sys.path.append(r'C:\Users\trexm\OneDrive\Bureau\project ai\NETY')
+
 
 def poser_question():
     entree_utilisateur = entree.get()
