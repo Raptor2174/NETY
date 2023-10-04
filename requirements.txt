@@ -6,7 +6,7 @@ Python 3.11.5
 pip -V
 pip 23.2.1
 
-
+pip install flake8 pytest
 
 -spacy 
 pip install spacy
