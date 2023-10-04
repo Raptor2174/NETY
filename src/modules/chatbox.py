@@ -1,8 +1,11 @@
 from module_text.modele_rnn import ModeleRNN
 from module_image.modele_cnn import ModeleCNN
 from module_audio.module_stt import ModeleSTT
+
 from PIL import Image
+
 from postprocessing.text_postprocessing import postprocess_output
+
 from preprocessing.text_preprocessing import preprocess_input
 from preprocessing.image_preprocessing import preprocess_image
 from preprocessing.image_preprocessing import preprocess_input
