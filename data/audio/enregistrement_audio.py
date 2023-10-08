@@ -6,7 +6,7 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000  # Taux d'échantillonnage (en Hz)
 CHUNK = 1024  # Taille du tampon audio
-RECORD_SECONDS = 5  # Durée d'enregistrement (en secondes)
+RECORD_SECONDS = 10  # Durée d'enregistrement (en secondes)
 OUTPUT_FILENAME = "data/audio/audio_data.wav"
 
 # Initialiser PyAudio
