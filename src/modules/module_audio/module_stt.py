@@ -18,8 +18,8 @@ class ModeleSTT(nn.Module):
         return predictions
 
 # Fonction pour charger des données audio
-def charger_audio(chemin_fichier_audio):
-    waveform, sample_rate = torchaudio.load(chemin_fichier_audio)
+def charger_audio(data\audio\audio_data.wav):
+    waveform, sample_rate = torchaudio.load(data/audio/audio_data.wav)
     return waveform, sample_rate
 
 # Fonction pour prétraiter les données audio
