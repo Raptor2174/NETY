@@ -1,6 +1,6 @@
-from module_text.modele_rnn import ModeleRNN
-from module_image.modele_cnn import ModeleCNN
-from module_audio.module_stt import ModeleSTT
+from src.modules.module_text.modele_rnn import ModeleRNN
+from src.modules.module_image.modele_cnn import ModeleCNN
+from src.modules.module_audio.module_stt import ModeleSTT
 
 from PIL import Image
 
