@@ -15,8 +15,8 @@ audio = pyaudio.PyAudio()
 # Configuration de l'interface audio
 stream = audio.open(format=FORMAT, channels=CHANNELS,
                     rate=RATE, input=True,
-                    frames_per_buffer=CHUNK)
-                    input_device_index=1)  # Remplacez 1 par l'index du microphone désiré
+                    frames_per_buffer=CHUNK) 
+input_device_index=1  # Remplacez 1 par l'index du microphone désiré
 
 print("Enregistrement audio en cours...")
 
