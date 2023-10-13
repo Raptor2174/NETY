@@ -47,3 +47,8 @@ pip3 install pyaudio
 -notebooks Jupyter
 pip install jupyter
 
+pip install keras
+
+pip install sequential
+
+pip install conv
