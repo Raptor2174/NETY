@@ -1,50 +1,62 @@
-import os
-import torch
-import torchaudio
-import torch.nn as nn
-from torchsummary import summary
+# module_sst.py
 
-# Définition du modèle STT
-class ModeleSTT(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(ModeleSTT, self).__init__()
-        
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=2, batch_first=True)
-        self.output_layer = nn.Linear(hidden_dim, output_dim)
-        
-    def forward(self, x):
-        lstm_out, _ = self.lstm(x)
-        predictions = self.output_layer(lstm_out[:, -1, :])
-        return predictions
+import librosa
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
 
-# Fonction pour charger des données audio
-def charger_audio(data\audio\audio_data.wav):
-    waveform, sample_rate =torchaudio.load(charger_audio)
-    return waveform, sample_rate
+def load_audio(file_path, duration=10, sr=22050):
+    audio, sr = librosa.load(file_path, duration=duration, sr=sr)
+    return audio, sr
 
-# Fonction pour prétraiter les données audio
-def pretraiter_audio(waveform):
-    # Appliquer un prétraitement audio si nécessaire (normalisation, etc.)
-    return waveform
+def preprocessing(audio):
+    # Importez ici le module de prétraitement
+    from src.modules.preprocessing.image_preprocessing import preprocess_audio
+    preprocessed_audio = preprocess_audio(audio)
+    return preprocessed_audio
 
-# Fonction pour effectuer la reconnaissance vocale
-def reconnaissance_vocale(modele, waveform):
-    with torch.no_grad():
-        output = modele(waveform)
-    return output
+def postprocessing(predictions):
+    # Importez ici le module de post-traitement
+    from src.modules.postprocessing.image_postprocessing import postprocess_predictions
+    postprocessed_predictions = postprocess_predictions(predictions)
+    return postprocessed_predictions
 
+def create_audio_processing_model(input_shape, num_classes):
+    model = Sequential()
+    
+    # Couche de convolution 2D
+    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+    model.add(MaxPooling2D(pool_size=(2, 2))
+    
+    # Couche de convolution 2D
+    model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
+    model.add(MaxPooling2D(pool_size=(2, 2))
+    
+    # Couche d'aplatissement
+    model.add(Flatten())
+    
+    # Couche entièrement connectée
+    model.add(Dense(128, activation='relu'))
+    
+    # Couche de sortie
+    model.add(Dense(num_classes, activation='softmax'))
+    
+    return model
+
+# Exemple d'utilisation
 if __name__ == "__main__":
-    # Exemple d'utilisation du module STT
-    chemin_fichier_audio = "data/audio/audio_data.wav"
-    waveform, sample_rate = charger_audio(data\audio\audio_data.wav)
-    waveform = pretraiter_audio(waveform)
+    file_path = "data/audio/audio_data.wav"  # Chemin vers le fichier audio
+    audio, sr = load_audio(file_path)
+    preprocessed_audio = preprocessing(audio)
+
+    input_shape = (audio_height, audio_width, audio_channels)  # Spécifiez les dimensions d'entrée
+    num_classes = number_of_classes  # Spécifiez le nombre de classes
+    model = create_audio_processing_model(input_shape, num_classes)
     
-    # Initialisation et affichage de la structure du modèle STT
-    modele_stt = ModeleSTT(input_dim=waveform.shape[1], hidden_dim=256, output_dim=26)
-    summary(modele_stt, input_size=(waveform.shape[1], waveform.shape[2]))
+    # Exécutez ici les prédictions avec le modèle sur preprocessed_audio
+    predictions = model.predict(preprocessed_audio)
+
+    postprocessed_predictions = postprocessing(predictions)
     
-    # Reconnaissance vocale
-    predictions = reconnaissance_vocale(modele_stt, waveform)
-    
-    print("Résultats de la reconnaissance vocale :")
-    print(predictions)
+    print(postprocessed_predictions)
