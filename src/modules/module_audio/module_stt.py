@@ -1,6 +1,6 @@
 import os
 import torch
-import torchaudio 
+import torchaudio
 import torch.nn as nn
 from torchsummary import summary
 
@@ -18,8 +18,8 @@ class ModeleSTT(nn.Module):
         return predictions
 
 # Fonction pour charger des données audio
-def charger_audio(chemin_fichier_audio):
-    waveform, sample_rate = torchaudio.load(chemin_fichier_audio)
+def charger_audio(data\audio\audio_data.wav):
+    waveform, sample_rate =torchaudio.load(charger_audio)
     return waveform, sample_rate
 
 # Fonction pour prétraiter les données audio
@@ -35,8 +35,8 @@ def reconnaissance_vocale(modele, waveform):
 
 if __name__ == "__main__":
     # Exemple d'utilisation du module STT
-    chemin_fichier_audio = "data/audio/Lomepal_-_Decrescendo__Acapella__voicemyai_inferenced.wav"
-    waveform, sample_rate = charger_audio(chemin_fichier_audio)
+    chemin_fichier_audio = "data/audio/audio_data.wav"
+    waveform, sample_rate = charger_audio(data\audio\audio_data.wav)
     waveform = pretraiter_audio(waveform)
     
     # Initialisation et affichage de la structure du modèle STT
