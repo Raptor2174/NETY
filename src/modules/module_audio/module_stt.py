@@ -1,37 +1,98 @@
-# module_sst.py
+"""
+Module de traitement audio et Speech-to-Text (STT).
+
+Ce module fournit des fonctionnalités pour charger, prétraiter et traiter des fichiers audio
+en utilisant des modèles de deep learning pour la reconnaissance vocale.
+"""
+
+# module_stt.py
 
 import librosa
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from typing import Tuple, Any
 
-def load_audio(file_path, duration=10, sr=22050):
+
+def load_audio(file_path: str, duration: int = 10, sr: int = 22050) -> Tuple[np.ndarray, int]:
+    """
+    Charge un fichier audio.
+    
+    Args:
+        file_path: Chemin vers le fichier audio
+        duration: Durée maximale en secondes (défaut: 10)
+        sr: Taux d'échantillonnage (défaut: 22050 Hz)
+        
+    Returns:
+        Tuple contenant:
+            - audio: Tableau numpy des échantillons audio
+            - sr: Taux d'échantillonnage utilisé
+    """
     audio, sr = librosa.load(file_path, duration=duration, sr=sr)
     return audio, sr
 
-def preprocessing(audio):
+
+def preprocessing(audio: np.ndarray) -> np.ndarray:
+    """
+    Prétraite les données audio.
+    
+    Args:
+        audio: Tableau numpy des échantillons audio bruts
+        
+    Returns:
+        Données audio prétraitées
+    """
     # Importez ici le module de prétraitement
     from src.modules.preprocessing.image_preprocessing import preprocess_audio
     preprocessed_audio = preprocess_audio(audio)
     return preprocessed_audio
 
-def postprocessing(predictions):
+
+def postprocessing(predictions: np.ndarray) -> Any:
+    """
+    Post-traite les prédictions du modèle.
+    
+    Args:
+        predictions: Prédictions brutes du modèle
+        
+    Returns:
+        Prédictions post-traitées
+    """
     # Importez ici le module de post-traitement
     from src.modules.postprocessing.image_postprocessing import postprocess_predictions
     postprocessed_predictions = postprocess_predictions(predictions)
     return postprocessed_predictions
 
-def create_audio_processing_model(input_shape, num_classes):
+
+def create_audio_processing_model(input_shape: Tuple[int, int, int], num_classes: int) -> Sequential:
+    """
+    Crée un modèle CNN pour le traitement audio.
+    
+    Architecture:
+        - 2 blocs de convolution 2D avec max pooling
+        - Couche de flatten
+        - Couche dense cachée avec 128 neurones
+        - Couche de sortie avec activation softmax
+    
+    Args:
+        input_shape: Forme des données d'entrée (height, width, channels)
+        num_classes: Nombre de classes pour la classification
+        
+    Returns:
+        Modèle Keras Sequential compilé
+    """
     model = Sequential()
     
     # Couche de convolution 2D
     model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
-    model.add(MaxPooling2D(pool_size=(2, 2))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
     
     # Couche de convolution 2D
     model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
-    model.add(MaxPooling2D(pool_size=(2, 2))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
     
     # Couche d'aplatissement
     model.add(Flatten())
