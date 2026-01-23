@@ -7,12 +7,10 @@ en utilisant spaCy et PyTorch.
 
 import torch
 from torch.utils.data import Dataset, DataLoader
-from torchtext.data.utils import get_tokenizer
 from torchtext.vocab import build_vocab_from_iterator
 from torch.nn.utils.rnn import pad_sequence
 import spacy
 import string
-import os
 from typing import List, Any
 
 # Utilisez le modèle de langue spaCy pour le prétraitement (assurez-vous de l'installer)

@@ -7,7 +7,6 @@ Ce module implémente un LSTM pour le traitement séquentiel de données textuel
 
 import torch
 import torch.nn as nn
-from typing import Tuple
 
 
 class ModeleRNN(nn.Module):
@@ -65,8 +64,9 @@ class ModeleRNN(nn.Module):
         # Couches entièrement connectées
         out = self.activation(self.fc1(out))
         out = self.fc2(out)
-        
+
         return out
+
 
 # Créer une instance du modèle
 modele_rnn = ModeleRNN(input_size=10, hidden_size=64, output_size=1)

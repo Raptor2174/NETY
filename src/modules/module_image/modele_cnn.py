@@ -6,7 +6,6 @@ Ce module implémente un CNN à 5 couches de convolution pour la classification 
 
 import torch
 import torch.nn as nn
-from typing import Tuple
 
 
 class ModeleCNN(nn.Module):
@@ -71,6 +70,7 @@ class ModeleCNN(nn.Module):
         # Couche de sortie
         x = self.fc(x)
         return x
+
 
 # Exemple d'utilisation :
 # Assurez-vous d'ajuster le nombre de classes (num_classes) en fonction de votre tâche.

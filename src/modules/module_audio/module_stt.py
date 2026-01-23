@@ -9,9 +9,6 @@ en utilisant des modèles de deep learning pour la reconnaissance vocale.
 
 import librosa
 import numpy as np
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
 from typing import Tuple, Any
@@ -105,19 +102,30 @@ def create_audio_processing_model(input_shape: Tuple[int, int, int], num_classes
     
     return model
 
+
 # Exemple d'utilisation
 if __name__ == "__main__":
+    # Exemple de configuration
     file_path = "data/audio/audio_data.wav"  # Chemin vers le fichier audio
+    
+    # Paramètres du modèle (à adapter selon vos besoins)
+    audio_height = 128  # Hauteur du spectrogramme
+    audio_width = 128   # Largeur du spectrogramme
+    audio_channels = 1  # Nombre de canaux (1 pour mono)
+    num_classes = 10    # Nombre de classes à classifier
+    
+    # Charger et prétraiter l'audio
     audio, sr = load_audio(file_path)
     preprocessed_audio = preprocessing(audio)
 
-    input_shape = (audio_height, audio_width, audio_channels)  # Spécifiez les dimensions d'entrée
-    num_classes = number_of_classes  # Spécifiez le nombre de classes
+    # Créer le modèle
+    input_shape = (audio_height, audio_width, audio_channels)
     model = create_audio_processing_model(input_shape, num_classes)
     
     # Exécutez ici les prédictions avec le modèle sur preprocessed_audio
     predictions = model.predict(preprocessed_audio)
 
+    # Post-traiter les prédictions
     postprocessed_predictions = postprocessing(predictions)
     
     print(postprocessed_predictions)
