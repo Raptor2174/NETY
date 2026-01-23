@@ -88,7 +88,11 @@ def module_text():
         
     except ImportError as e:
         print(f"✗ Erreur d'importation: {e}")
-        print("  Vérifiez que tous les modules sont présents.")
+        print("  Vérifiez que le module existe dans src/modules/module_text/modele_rnn.py")
+        print("  et que PyTorch est installé (pip install torch).")
+    except AttributeError as e:
+        print(f"✗ Erreur d'attribut: {e}")
+        print("  Le module RNN n'a pas la structure attendue.")
     except Exception as e:
         print(f"✗ Erreur: {e}")
     
@@ -141,7 +145,11 @@ def module_image():
         
     except ImportError as e:
         print(f"✗ Erreur d'importation: {e}")
-        print("  Vérifiez que tous les modules sont présents.")
+        print("  Vérifiez que le module existe dans src/modules/module_image/modele_cnn.py")
+        print("  et que PyTorch est installé (pip install torch torchvision).")
+    except AttributeError as e:
+        print(f"✗ Erreur d'attribut: {e}")
+        print("  Le module CNN n'a pas la structure attendue.")
     except Exception as e:
         print(f"✗ Erreur: {e}")
     
@@ -178,14 +186,22 @@ def module_audio():
         
         # Afficher le résumé du modèle
         print("Résumé du modèle:")
-        model.summary()
+        try:
+            model.summary()
+        except AttributeError:
+            print("  (La méthode summary() n'est pas disponible)")
+            print(f"  Le modèle a été créé avec succès.")
         print()
         print("Note: Ce modèle utilise des CNN pour traiter les spectrogrammes audio")
         print("      et doit être entraîné avec des données audio réelles.")
         
     except ImportError as e:
         print(f"✗ Erreur d'importation: {e}")
-        print("  Vérifiez que TensorFlow/Keras et les modules sont installés.")
+        print("  Vérifiez que le module existe dans src/modules/module_audio/module_stt.py")
+        print("  et que TensorFlow/Keras est installé (pip install tensorflow keras).")
+    except AttributeError as e:
+        print(f"✗ Erreur d'attribut: {e}")
+        print("  Le module STT n'a pas la structure attendue.")
     except Exception as e:
         print(f"✗ Erreur: {e}")
     
