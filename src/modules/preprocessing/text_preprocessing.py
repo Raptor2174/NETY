@@ -68,7 +68,8 @@ class TextDataset(Dataset):
         text = self.data[idx]
         # Tokenisez et convertissez le texte en indices de vocabulaire
         tokens = preprocess_input(text)
-        text_indices = [self.vocab[token] for token in tokens]
+        # Gérer les tokens hors vocabulaire avec un token spécial <unk>
+        text_indices = [self.vocab.get(token, self.vocab.get('<unk>', 0)) for token in tokens]
         return torch.tensor(text_indices)
 
 
