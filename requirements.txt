@@ -1,54 +1,30 @@
--version
+# NETY - Requirements
+# Python 3.12+
 
-python --version
-Python 3.11.5
+# Deep Learning Frameworks
+torch>=2.1.0
+torchvision>=0.16.0
+torchaudio>=2.1.0
+torchtext>=0.16.0
+torchsummary>=1.5.1
+tensorflow>=2.15.0
+keras>=3.0.0
 
-pip -V
-pip 23.2.1
+# Audio Processing
+librosa>=0.10.1
+pyaudio>=0.2.14
+pyttsx3>=2.90
 
-pip install flake8 pytest
+# Natural Language Processing
+spacy>=3.7.0
+# Pour installer le modèle français: python -m spacy download fr_core_news_sm
 
--spacy 
-pip install spacy
-python -m spacy download fr_core_news_sm
+# Development and Testing
+pytest>=7.4.3
+flake8>=6.1.0
 
--pytorch
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117
+# Jupyter Notebooks
+jupyter>=1.0.0
 
--CUBA
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu117 
-
--pyttsx3
-pip install pyttsx3
-
--tkinter
-pip install tk
-
--torch
-pip install torch
-
--torchsummary 
-pip install torchsummary 
-
--torchaudio
-pip install torchaudio
-
--torchtext
-pip install torchtext
-
--PortAudio
-instalation sur site 
-
--PyAudio
-pip install PyAudio
-ou
-pip3 install pyaudio
-
--notebooks Jupyter
-pip install jupyter
-
-pip install keras
-
-pip install sequential
-
-pip install conv
+# Utilities
+numpy>=1.26.0

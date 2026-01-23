@@ -1,60 +1,140 @@
-# NETY
-Dossier de Projet - IA de Traitement de Langage Naturel NETY
+# NETY - IA de Traitement de Langage Naturel
 
-Titre du Projet : NETY IA
+## 📋 Description du Projet
 
-Objectif du Projet : NETY et un project de creation d'ia, comme tout mes presedand projet c'est avent tout pour m'amuser et aprendre (pour ce projet la j'apren surtout l'univer des ia le le langage python)
+**NETY** est un projet de création d'intelligence artificielle axé sur le traitement du langage naturel (NLP), le traitement d'images (CNN) et le traitement audio (Speech-to-Text). Ce projet est avant tout un projet d'apprentissage pour explorer l'univers de l'IA et le langage Python.
 
-Membres de l'Équipe : meuneur du projet : Raptor_ (proprietair de NETY)
+## 🎯 Objectifs
 
-Contexte : ce projet intervient aussi dans un contecte de "course a l'ia" qui semble fair fair beaucoup parler de lui 
+- Créer une IA multimodale capable de traiter du texte, des images et de l'audio
+- Apprendre les concepts fondamentaux du machine learning et du deep learning
+- Développer une architecture modulaire et extensible
+- Participer à l'innovation dans le domaine de l'IA
 
-Étapes du Projet :  1 : structurer le projet et la dase des dossier pour visualiser les diferant composent et modules qui viendron s'ajouter par la suit de facon a bient visualiser le tout dans sont ensemble 
-                    2 : comencer a crée les premier module essentiel au premiere fase de develaupement de l'ia
-                    3 : entainer l'ia avec les données d'entraînement
-                    4 : evaluer les performence de l'ia 
-                    5 : rajouter des modules pour etendre les posibiliter d'interaction et de potentiel
-                    6 : ameliorer les diferant composent et modules 
-                    7 : posible deploiment 
-                    8 : amelioration continue et resolution des buges qui peuve rester "on a jamais fini d'apremdre"
+## 👥 Équipe
 
-Collecte de Données : les donnais seron colaicter sur des Bases de Données Publiques, APIs et Utilisation de Données Open Source. 
+- **Chef de projet** : Raptor_ (propriétaire de NETY)
 
-Description : [Expliquez comment vous allez collecter les données pour entraîner votre modèle NLP]
-Source des Données : [Où allez-vous obtenir les données ?]
-Prétraitement des Données :
+## 🏗️ Architecture du Projet 
 
-Nettoyage des Données : [Détaillez les étapes de nettoyage des données, telles que la suppression des valeurs manquantes, la normalisation, etc.]
-Tokenisation : [Expliquez comment vous allez diviser le texte en tokens]
-Encodage : [Décrivez comment vous allez encoder les données textuelles]
-Choix de l'Architecture du Modèle :
+## 🏗️ Architecture du Projet
 
-Modèle de Base : [Spécifiez le modèle de langage que vous allez utiliser comme point de départ, par exemple, GPT-3, BERT, etc.]
-Personnalisation du Modèle : [Détaillez les modifications que vous envisagez d'apporter au modèle de base]
-Entraînement du Modèle :
+```
+NETY/
+├── src/
+│   ├── modules/
+│   │   ├── module_text/       # Traitement de texte avec RNN/LSTM
+│   │   ├── module_image/      # Traitement d'images avec CNN
+│   │   ├── module_audio/      # Traitement audio et STT
+│   │   ├── preprocessing/     # Prétraitement des données
+│   │   ├── postprocessing/    # Post-traitement des résultats
+│   │   └── module_interface/  # Interfaces utilisateur
+│   └── utils/                 # Fonctions utilitaires
+├── data/                      # Données d'entraînement
+├── documentation/             # Documentation technique
+└── main.py                    # Point d'entrée principal
+```
 
-Paramètres d'Entraînement : [Précisez les hyperparamètres et les détails de l'entraînement]
-Matériel Informatique : [Indiquez les ressources matérielles nécessaires]
-Évaluation du Modèle :
+## 📝 Étapes du Projet
 
-Métriques d'Évaluation : [Quelles métriques utiliserez-vous pour évaluer la performance du modèle ?]
-Jeu de Données de Test : [Expliquez comment vous allez constituer un jeu de données de test]
-Déploiement de l'IA :
+1. ✅ **Structuration du projet** - Organisation des dossiers et modules
+2. ✅ **Création des modules essentiels** - Modules de base pour le développement
+3. ⏳ **Entraînement de l'IA** - Avec les données d'entraînement
+4. ⏳ **Évaluation des performances** - Tests et métriques
+5. ⏳ **Extension des modules** - Ajout de nouvelles fonctionnalités
+6. ⏳ **Amélioration continue** - Optimisation des composants
+7. ⏳ **Déploiement** - Mise en production potentielle
+8. ⏳ **Maintenance** - Résolution de bugs et améliorations continues
 
-Interface Utilisateur : [Décrivez comment les utilisateurs interagiront avec l'IA]
-Plateforme de Déploiement : [Indiquez où l'IA sera déployée, par exemple, sur un site web, une application mobile, etc.]
-Maintenance et Mises à Jour :
+## 🚀 Installation
 
-Plan de Maintenance : [Expliquez comment vous prévoyez de maintenir l'IA après le déploiement]
-Mises à Jour Futures : [Évoquez la possibilité de futures mises à jour ou améliorations]
-Éthique et Sécurité :
+### Prérequis
 
-Considérations Éthiques : [Décrivez comment vous aborderez les questions éthiques liées à l'utilisation de l'IA de traitement de langage]
-Sécurité des Données : [Expliquez comment vous assurerez la sécurité des données utilisateur]
-Calendrier du Projet : [Établissez un calendrier avec des dates estimées pour chaque étape du projet]
+- Python 3.12+
+- pip
 
-Budget du Projet : [Si nécessaire, indiquez les coûts prévus pour les ressources matérielles, logicielles et humaines]
+### Installation des dépendances
 
-Risques Potentiels : [Identifiez les risques potentiels associés au projet et les stratégies pour les atténuer]
+```bash
+# Cloner le repository
+git clone https://github.com/Raptor2174/NETY.git
+cd NETY
 
-Références : [Listez les sources et les références que vous consultez pour ce projet]
+# Installer les dépendances
+pip install -r requirements.txt
+
+# Télécharger le modèle de langue française pour spaCy
+python -m spacy download fr_core_news_sm
+```
+
+## 💻 Utilisation
+
+```bash
+# Lancer l'application principale
+python main.py
+```
+
+## 📊 Collecte de Données
+
+Les données seront collectées à partir de :
+- Bases de données publiques
+- APIs ouvertes
+- Données Open Source
+
+## 🧠 Modèles Utilisés
+
+### Traitement de Texte (RNN)
+- Architecture : LSTM (Long Short-Term Memory)
+- Framework : PyTorch
+- Prétraitement : spaCy pour le français
+
+### Traitement d'Images (CNN)
+- Architecture : Réseau de neurones convolutionnel multicouche
+- Framework : PyTorch
+- Prétraitement : normalisation et augmentation
+
+### Traitement Audio (STT)
+- Architecture : CNN pour spectrogrammes
+- Framework : TensorFlow/Keras
+- Prétraitement : librosa pour l'extraction de features
+
+## 🔧 Développement
+
+### Linting
+
+```bash
+flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+```
+
+### Tests
+
+```bash
+pytest
+```
+
+## 📚 Documentation
+
+Consultez le dossier `documentation/` pour plus de détails sur :
+- La structure du projet
+- Les modèles RNN, CNN et STT
+- Les guides d'intégration
+
+## 🔒 Sécurité
+
+Voir [SECURITY.md](SECURITY.md) pour les politiques de sécurité.
+
+## 📄 Licence
+
+Voir le fichier [LICENSE](LICENSE) pour plus de détails.
+
+## 🤝 Contribution
+
+Les contributions sont les bienvenues ! N'hésitez pas à ouvrir des issues ou des pull requests.
+
+## 📧 Contact
+
+Pour toute question, contactez Raptor_ via GitHub.
+
+---
+
+*"On n'a jamais fini d'apprendre"* 🚀
