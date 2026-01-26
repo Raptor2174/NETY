@@ -1,6 +1,10 @@
 # NETY - Requirements
 # Python 3.12+
 
+# Remarque → Il y a trop de piblioteques pour le stade du projet actuel. Il faut imperativement nettoyer et optimiser cela.
+
+// Basic Libraries
+
 # Deep Learning Frameworks
 torch>=2.1.0
 torchvision>=0.16.0
