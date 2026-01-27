@@ -1,3 +1,4 @@
+from typing import Optional
 from ui.admin_room import AdminRoomView
 from nety.services.nety_recepteur import NetyRecepteur
 
@@ -9,6 +10,18 @@ def get_modules_status():
         {"type": "CBM", "name": "LM", "status": "idle"},
      ]
 
+def send_to_nety(self, data: str):
+    with open("tmp_to_nety.txt", "w") as f:
+        f.write(data)
+
+def check_for_admin_message(self) -> Optional[str]:
+    try:
+        with open("tmp_from_dashboard.txt", "r") as f:
+            content = f.read().strip()
+            open("tmp_from_dashboard.txt", "w").close()
+            return content
+    except FileNotFoundError:
+        return None
 
 class NetyAdapter:
     def __init__(self):
@@ -18,20 +31,9 @@ class NetyAdapter:
         """Définit la référence à AdminRoom"""
         self.admin_room = admin_room
 
-    def process_prompt(self, prompt):
-        """Traite un prompt envoyé par l'interface"""
-        try:
-            # Simule le traitement du prompt
-            response = self._execute_prompt(prompt)
-            return response
-        except Exception as e:
-            return f"Erreur lors du traitement: {str(e)}"
 
-    def _execute_prompt(self, prompt):
-        """Exécute le prompt"""
-        # Placeholder pour la logique IA
-        return f"IA réponse à: {prompt}"
 
+ 
 
 
 

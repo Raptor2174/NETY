@@ -1,5 +1,3 @@
-
-
 __vertion___ = "0.1.0"
 __author__ = "Raptor_"
 
@@ -8,7 +6,7 @@ __author__ = "Raptor_"
 Initialisation du système NETY - Configuration et préparation des modules principaux.
 """
 
-from nety.core.config import Config, ModuleTags
+from .config import Config, ModuleTags
 #from nety.core.brain import 
 #from 
 #from data.models ... import ...
