@@ -1,6 +1,8 @@
 import tkinter as tk
 from ui.taskbar import TaskbarView
 from ui.dashboard import DashboardView
+from ui.admin_room import AdminRoomView
+from ui.error_404 import NotFoundView
 
 def launch_app():
     root = tk.Tk()
@@ -20,15 +22,26 @@ def launch_app():
     middle_frame.grid(row=1, column=0, sticky="nsew")
     bottom_frame.grid(row=2, column=0, sticky="ew")
 
-    top_view(top_frame)
-    middle_view(middle_frame)
-    bottom_view(bottom_frame)
+    # Passer middle_frame à middle_view pour pouvoir le modifier
+    middle_view_container = middle_view(middle_frame)
+    
+    # Callback pour changer de page
+    def on_page_change(page_id):
+        # Effacer le contenu actuel
+        for widget in middle_frame.winfo_children():
+            widget.destroy()
+        
+        # Charger la nouvelle page
+        if page_id == "dashboard":
+            DashboardView(middle_frame)
+        elif page_id == "admin_room":
+            AdminRoomView(middle_frame)
+        elif page_id == "404":
+            NotFoundView(middle_frame)
+
+    taskbar = TaskbarView(bottom_frame, on_page_change=on_page_change)
 
     root.mainloop()
-
-def top_view(root):
-    dashboard = TaskbarView(root)
-    return dashboard
 
 def middle_view(root):
     dashboard = DashboardView(root)
