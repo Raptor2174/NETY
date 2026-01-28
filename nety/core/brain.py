@@ -1,189 +1,75 @@
-"""
-NETY Brain - Cerveau central de l'IA
-Coordonne tous les modules et prend les décisions
-"""
+# nety/core/nety_brain.py
 
-from typing import Dict, Any, Optional
-from ..modules.machinelearning.ml_engine import MLEngine
-from .config import ModuleTags
+from nety.cortex_limbic.limbic_filter import LimbicFilter
+from nety.cortex_limbic.memory_manager import MemoryManager
+from nety.knowledge_base.knowledge_manager import KnowledgeManager
+from nety.core.intent_analyzer import IntentAnalyzer
+from nety.core.response_generator import ResponseGenerator
 
-
-class Brain:
+class NETYBrain:
     """
-    Cerveau central de NETY
-    - Analyse les entrées
-    - Route vers les bons modules
-    - Combine les résultats
+    Le cerveau principal de NETY
+    Orchestre tous les modules
     """
     
     def __init__(self):
-        """Initialise le cerveau et ses composants"""
-        print("🧠 Initialisation du Brain NETY...")
-        
-        # Moteur de ML
-        self.ml_engine = MLEngine()
-        
-        # Mémoire à court terme (conversation en cours)
-        self.short_term_memory = []
-        
-        # État des modules
-        self.modules_status = self._init_modules()
-        
-        print("✓ Brain initialisé avec succès")
+        # Initialisation des modules
+        self.limbic_filter = LimbicFilter()
+        self.memory = MemoryManager()
+        self.knowledge = KnowledgeManager()
+        self.intent_analyzer = IntentAnalyzer()
+        self.response_generator = ResponseGenerator()
     
-    # ==========================================
-    # 🎯 FONCTION PRINCIPALE
-    # ==========================================
-    def think(self, input_data: str) -> str:
-        """
-        Fonction principale de réflexion
+    def process_message(self, message: str) -> str:
+        """Pipeline complet de traitement"""
         
-        Args:
-            input_data: Texte d'entrée de l'utilisateur
-            
-        Returns:
-            Résultat du traitement
-        """
-        print(f"🧠 Brain réfléchit à : {input_data}")
+        # [1] Analyse d'intention
+        intent = self.intent_analyzer.analyze(message)
         
-        # 1. Prétraitement
-        cleaned_input = self._preprocess(input_data)
+        # [2] Récupération contextuelle
+        context = self.retrieve_context(message, intent)
         
-        # 2. Analyser l'intention
-        intent = self._analyze_intent(cleaned_input)
+        # [3] Filtrage par cortex limbique
+        personality_filter = self.limbic_filter.apply_filter(context)
         
-        # 3. Router vers le bon module
-        result = self._route_to_module(intent, cleaned_input)
+        # [4] Génération de réponse
+        response = self.response_generator.generate(
+            message, 
+            context, 
+            personality_filter
+        )
         
-        # 4. Post-traitement
-        final_output = self._postprocess(result)
+        # [5] Validation
+        validated_response = self.validate_response(response)
         
-        # 5. Mémoriser
-        self._memorize(input_data, final_output)
+        # [6] Apprentissage
+        self.update_memory(message, validated_response)
         
-        return final_output
+        return validated_response
     
-    # ==========================================
-    # 🔍 ANALYSE D'INTENTION
-    # ==========================================
-    def _analyze_intent(self, text: str) -> str:
-        """
-        Détermine ce que l'utilisateur veut faire
+    def retrieve_context(self, message: str, intent: dict) -> dict:
+        """Récupère le contexte des deux mémoires"""
         
-        Intentions possibles :
-        - transform_text : Réécrire/transformer du texte
-        - question : Poser une question
-        - command : Donner une commande
-        - conversation : Discussion naturelle
-        """
-        text_lower = text.lower()
+        # Contexte identité (cortex limbique)
+        identity_context = {
+            "personality": self.limbic_filter.personality.get_personality(),
+            "rules": self.memory.get_rules()
+        }
         
-        # Détection simple (tu pourras améliorer avec le ML)
-        if any(word in text_lower for word in ["réécris", "transforme", "corrige"]):
-            return "transform_text"
+        # Contexte connaissances (base étendue)
+        knowledge_context = self.knowledge.search(message, intent)
         
-        if "?" in text or any(word in text_lower for word in ["quoi", "comment", "pourquoi"]):
-            return "question"
-        
-        if any(word in text_lower for word in ["fait", "exécute", "lance"]):
-            return "command"
-        
-        return "conversation"
+        return {
+            "identity": identity_context,
+            "knowledge": knowledge_context
+        }
     
-    # ==========================================
-    # 🚦 ROUTAGE VERS LES MODULES
-    # ==========================================
-    def _route_to_module(self, intent: str, data: str) -> str:
-        """
-        Route la requête vers le bon module selon l'intention
-        """
-        print(f"📍 Routage vers module : {intent}")
-        
-        if intent == "transform_text":
-            # Utiliser le ML Engine pour transformer
-            return self.ml_engine.transform_text(data)
-        
-        elif intent == "question":
-            # Utiliser le module de compréhension
-            return self._answer_question(data)
-        
-        elif intent == "command":
-            # Exécuter une commande système
-            return self._execute_command(data)
-        
-        else:  # conversation
-            # Génération de réponse naturelle
-            return self._generate_conversation(data)
+    def validate_response(self, response: str) -> str:
+        """Valide la réponse"""
+        # Logique de validation
+        return response
     
-    # ==========================================
-    # 🛠️ FONCTIONS MÉTIER
-    # ==========================================
-    def _answer_question(self, question: str) -> str:
-        """Répond à une question"""
-        # Pour l'instant simple, tu pourras utiliser le ML plus tard
-        return f"Réponse à '{question}': Fonction en développement."
-    
-    def _execute_command(self, command: str) -> str:
-        """Exécute une commande"""
-        # Exemple : "active le module TPM"
-        return f"Commande '{command}' exécutée."
-    
-    def _generate_conversation(self, text: str) -> str:
-        """Génère une réponse conversationnelle"""
-        # Utiliser le ML Engine
-        return self.ml_engine.generate_response(text)
-    
-    # ==========================================
-    # 🧹 PRÉ/POST TRAITEMENT
-    # ==========================================
-    def _preprocess(self, text: str) -> str:
-        """Nettoie le texte d'entrée"""
-        # Supprime espaces multiples, normalise
-        return " ".join(text.strip().split())
-    
-    def _postprocess(self, text: str) -> str:
-        """Finalise la sortie"""
-        # Ajoute la ponctuation, met en forme
-        if not text.endswith((".", "!", "?")):
-            text += "."
-        return text
-    
-    # ==========================================
-    # 💾 MÉMOIRE
-    # ==========================================
-    def _memorize(self, input_data: str, output: str):
-        """Stocke l'interaction dans la mémoire court terme"""
-        self.short_term_memory.append({
-            "input": input_data,
-            "output": output
-        })
-        
-        # Limite la mémoire à 10 interactions
-        if len(self.short_term_memory) > 10:
-            self.short_term_memory.pop(0)
-    
-    def get_context(self) -> list:
-        """Récupère le contexte de conversation"""
-        return self.short_term_memory
-    
-    # ==========================================
-    # 🔧 GESTION DES MODULES
-    # ==========================================
-    def _init_modules(self) -> Dict[str, str]:
-        """Initialise l'état des modules"""
-        modules = {}
-        for group in ModuleTags.all_group_tags():
-            submodules = ModuleTags.SUBMODULES.get(group, {})
-            for name, code in submodules.items():
-                modules[code] = "inactive"  # Par défaut inactif
-        return modules
-    
-    def activate_module(self, module_code: str):
-        """Active un module spécifique"""
-        if module_code in self.modules_status:
-            self.modules_status[module_code] = "active"
-            print(f"✓ Module {module_code} activé")
-    
-    def get_modules_status(self) -> Dict[str, str]:
-        """Retourne l'état de tous les modules"""
-        return self.modules_status
+    def update_memory(self, message: str, response: str):
+        """Met à jour la mémoire"""
+        summary = f"User: {message[:50]}... | Response: {response[:50]}..."
+        self.memory.add_memory(summary)
