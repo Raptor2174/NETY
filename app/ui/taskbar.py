@@ -24,6 +24,7 @@ class TaskbarView:
         pages = [
             ("Dashboard", "dashboard"),
             ("Admin Room", "admin_room"),
+            ("Logs", "logs"),
             ("404", "404")
         ]
 
