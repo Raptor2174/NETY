@@ -1,6 +1,6 @@
 import time
-from core.config import Config
-from core.system_init import initialize_system
+from .core.config import Config
+from .core.system_init import initialize_system
 
 
 class BoucleSettings:

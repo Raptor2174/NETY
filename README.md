@@ -69,10 +69,39 @@ python -m spacy download fr_core_news_sm
 
 ## 💻 Utilisation
 
+### Lancer le Dashboard NETY
+
 ```bash
-# Lancer l'application principale
-python main.py
+# Lancer uniquement l'interface Dashboard
+python app/main.py
+
+# OU lancer le système complet (Dashboard + Backend NETY)
+python run.py
 ```
+
+### Fonctionnalités du Dashboard
+
+Le **NETY Dashboard** propose trois pages principales :
+
+1. **📊 Dashboard** - Contrôle de l'IA et visualisation des modules
+   - Bouton toggle pour démarrer/arrêter l'IA NETY
+   - Affichage de l'état des 4 modules principaux
+   - Indicateur de statut en temps réel
+
+2. **🔧 Admin Room** - Communication avec l'IA
+   - Chatbox pour messages simples
+   - Prompt Expeditor pour requêtes complexes
+   - Historique des conversations
+
+3. **📊 Logs/Terminal** - Surveillance des actions (NOUVEAU! 🆕)
+   - Affichage temps réel des logs de l'IA
+   - Style terminal noir/vert
+   - Timestamps sur chaque action
+   - Boutons Rafraîchir et Effacer
+   - Auto-scroll vers les derniers logs
+   - Limite de 1000 entrées
+
+Pour plus de détails, consultez le [Guide Utilisateur](documentation/guide_utilisateur.md).
 
 ## 📊 Collecte de Données
 
