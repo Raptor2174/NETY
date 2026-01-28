@@ -21,7 +21,7 @@ class Brain:
         print("🧠 Initialisation du Brain NETY...")
         
         # Moteur de ML
-        self.ml_engine = MLEngine(model="default")
+        self.ml_engine = MLEngine()
         
         # Mémoire à court terme (conversation en cours)
         self.short_term_memory = []

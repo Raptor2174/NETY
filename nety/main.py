@@ -1,8 +1,8 @@
 import time
 
 from nety.core.brain import Brain
-from .core.config import Config
-from .core.system_init import initialize_system
+from nety.core.config import Config
+from nety.core.system_init import initialize_system
 
 
 class BoucleSettings:
@@ -51,7 +51,7 @@ class NETYSystem:
                 time.sleep(BoucleSettings.LOOP_DELAY)
                 continue
 
-            self.idle_counter = 0  # reset dès qu’on reçoit quelque chose
+            self.idle_counter = 0  # reset dès qu'on reçoit quelque chose
 
             if not self.validate_input(input_data):
                 time.sleep(BoucleSettings.LOOP_DELAY)
@@ -81,10 +81,34 @@ class NETYSystem:
     # ======================
     def check_for_input(self):
         """
-        Simulation d’entrée.
-        Retourner None = aucune donnée
+        Vérifie s'il y a des données d'entrée
+        
+        V1 : Lit depuis un fichier texte (pour test)
+        V2 : Lira depuis l'interface dashboard
         """
-        return None  # <-- comportement réel attendu pour l’instant
+        import os
+        
+        # Vérifier si un fichier d'entrée existe
+        input_file = "tmp_to_nety.txt"
+        
+        try:
+            if os.path.exists(input_file):
+                with open(input_file, "r", encoding="utf-8") as f:
+                    content = f.read().strip()
+                
+                # Si le fichier contient du texte
+                if content:
+                    # Vider le fichier après lecture
+                    with open(input_file, "w", encoding="utf-8") as f:
+                        f.write("")
+                    
+                    print(f"📥 Données reçues : {content}")
+                    return content
+        
+        except Exception as e:
+            print(f"⚠️ Erreur lecture entrée : {e}")
+        
+        return None
 
     def validate_input(self, data) -> bool:
         print(f"Validation entrée : {data}")
@@ -120,7 +144,7 @@ class NETYSystem:
 
 
 # ======================
-# POINT D’ENTRÉE
+# POINT D'ENTRÉE
 # ======================
 if __name__ == "__main__":
     nety = NETYSystem()
