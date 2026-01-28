@@ -107,8 +107,13 @@ class DashboardView:
             mod_frame = tk.Frame(self.modules_frame, relief="groove", borderwidth=1)
             mod_frame.pack(fill="x", pady=2)
 
-            # Icône de statut
-            status_icon = "🟢" if mod['status'] == "running" else "🟡" if mod['status'] == "idle" else "⚫"
+            # Déterminer l'icône de statut
+            status_icons = {
+                "running": "🟢",
+                "idle": "🟡",
+                "inactive": "⚫"
+            }
+            status_icon = status_icons.get(mod['status'], "⚪")
             
             label = tk.Label(
                 mod_frame,

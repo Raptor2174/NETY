@@ -61,8 +61,8 @@ class AdminRoomView:
         )
         send_btn.pack(side=tk.LEFT)
 
-        # ===== PROMPT_EXPEDITOR =====
-        prompt_label = tk.Label(main_frame, text="🤖 Prompt Expeditor (vers IA)", font=("Arial", 12, "bold"), bg="#f0f0f0")
+        # ===== PROMPT_EXPEDITEUR =====
+        prompt_label = tk.Label(main_frame, text="🤖 Expéditeur de Prompts (vers IA)", font=("Arial", 12, "bold"), bg="#f0f0f0")
         prompt_label.pack(anchor="w", pady=(0, 5))
 
         # Zone de texte pour les prompts

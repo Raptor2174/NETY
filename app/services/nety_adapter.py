@@ -13,49 +13,71 @@ def get_modules_status():
 
 
 class NetyAdapter:
-    """Adaptateur pour communiquer avec le système NETY AI"""
+    """Adaptateur pour communiquer avec le système NETY AI
+    
+    Note: Cette implémentation est une simulation. Les méthodes start_nety()
+    et stop_nety() ne démarrent pas réellement le système NETY, elles gèrent
+    seulement un état booléen pour l'interface utilisateur.
+    """
     
     def __init__(self):
-        self.admin_room = None
         self.nety_running = False
-        self.nety_system = None
 
-    def set_admin_room(self, admin_room):
-        """Définit la référence à AdminRoom"""
-        self.admin_room = admin_room
-
-    def send_to_nety(self, data: str):
-        """Envoie des données vers NETY"""
+    def send_to_nety(self, data: str) -> bool:
+        """Envoie des données vers NETY
+        
+        Returns:
+            bool: True si l'envoi a réussi, False sinon
+        """
+        if not data:
+            return False
+            
         try:
-            with open("tmp_to_nety.txt", "w") as f:
+            with open("tmp_to_nety.txt", "w", encoding='utf-8') as f:
                 f.write(data)
-        except Exception as e:
+            return True
+        except (IOError, OSError) as e:
             print(f"Erreur lors de l'envoi vers NETY: {e}")
+            return False
 
     def check_for_admin_message(self) -> Optional[str]:
-        """Vérifie s'il y a des messages depuis le dashboard"""
+        """Vérifie s'il y a des messages depuis le dashboard
+        
+        Returns:
+            Optional[str]: Le message lu, ou None si aucun message
+        """
         try:
             if os.path.exists("tmp_from_dashboard.txt"):
-                with open("tmp_from_dashboard.txt", "r") as f:
+                with open("tmp_from_dashboard.txt", "r", encoding='utf-8') as f:
                     content = f.read().strip()
-                # Nettoyer le fichier après lecture
-                with open("tmp_from_dashboard.txt", "w") as f:
-                    f.write("")
-                return content
-        except FileNotFoundError:
-            pass
-        except Exception as e:
+                # Nettoyer le fichier après lecture seulement si non vide
+                if content:
+                    with open("tmp_from_dashboard.txt", "w", encoding='utf-8') as f:
+                        f.write("")
+                    return content
+        except (FileNotFoundError, IOError, OSError) as e:
             print(f"Erreur lors de la lecture du message: {e}")
         return None
 
     def process_prompt(self, prompt: str) -> str:
-        """Traite un prompt et retourne une réponse"""
+        """Traite un prompt et retourne une réponse
+        
+        Args:
+            prompt: Le prompt à traiter
+            
+        Returns:
+            str: La réponse du système
+        """
         if not self.nety_running:
             return "⚠️ L'IA NETY n'est pas démarrée"
         
-        # Pour l'instant, simulation de traitement
-        self.send_to_nety(prompt)
-        return f"✓ Prompt reçu et traité: {prompt[:50]}..."
+        # Simulation de traitement
+        success = self.send_to_nety(prompt)
+        if success:
+            truncated = f"{prompt[:50]}..." if len(prompt) > 50 else prompt
+            return f"✓ Prompt reçu et traité ({len(prompt)} caractères): {truncated}"
+        else:
+            return "❌ Erreur lors de l'envoi du prompt"
 
     def start_nety(self):
         """Démarre le système NETY"""

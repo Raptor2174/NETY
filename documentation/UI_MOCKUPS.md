@@ -79,7 +79,7 @@
 ║  [___________________________________] [ Envoyer ]                    ║
 ║                                                                       ║
 ║                                                                       ║
-║  🤖 Prompt Expeditor (vers IA)                                        ║
+║  🤖 Expéditeur de Prompts (vers IA)                                    ║
 ║  ┌─────────────────────────────────────────────────────────────────┐ ║
 ║  │                                                                   │ ║
 ║  │  Écrivez votre prompt ici...                                     │ ║
@@ -98,7 +98,7 @@
 
 ### Fonctionnalités Admin Room:
 1. **Chatbox**: Communication rapide avec affichage des messages
-2. **Prompt Expeditor**: Zone de texte pour envoyer des prompts complexes
+2. **Expéditeur de Prompts**: Zone de texte pour envoyer des prompts complexes
 3. **Indicateur de statut**: Affiche si l'IA est démarrée ou non
 4. **Messages d'erreur**: Si l'IA n'est pas démarrée, un message d'avertissement s'affiche
 
