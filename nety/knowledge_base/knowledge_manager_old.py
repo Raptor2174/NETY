@@ -1,5 +1,0 @@
-
-
-
-class KnowledgeManager:
-    pass
