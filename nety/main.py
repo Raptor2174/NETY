@@ -2,6 +2,7 @@ from .core.config import Config
 from .core.system_init import initialize_system
 
 
+
 class NETYSystem:
     """
     Classe principale orchestrant le cycle de vie de NETY :
