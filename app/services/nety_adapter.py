@@ -1,5 +1,6 @@
-from typing import Optional
+from typing import Optional, List
 import os
+from datetime import datetime
 
 
 def get_modules_status():
@@ -22,6 +23,34 @@ class NetyAdapter:
     
     def __init__(self):
         self.nety_running = False
+        self.logs: List[str] = []
+        self._add_log("💡 Système NETY Dashboard initialisé")
+
+    def _add_log(self, message: str):
+        """Ajoute un message au journal des logs
+        
+        Args:
+            message: Le message à ajouter
+        """
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = f"[{timestamp}] {message}"
+        self.logs.append(log_entry)
+        # Limiter à 1000 entrées pour éviter une croissance infinie
+        if len(self.logs) > 1000:
+            self.logs.pop(0)
+
+    def get_logs(self) -> List[str]:
+        """Retourne tous les logs collectés
+        
+        Returns:
+            List[str]: Liste des messages de log
+        """
+        return self.logs.copy()
+
+    def clear_logs(self):
+        """Efface tous les logs"""
+        self.logs.clear()
+        self._add_log("🗑️ Logs effacés")
 
     def send_to_nety(self, data: str) -> bool:
         """Envoie des données vers NETY
@@ -35,9 +64,12 @@ class NetyAdapter:
         try:
             with open("tmp_to_nety.txt", "w", encoding='utf-8') as f:
                 f.write(data)
+            self._add_log(f"📤 Données envoyées vers NETY: {data[:50]}...")
             return True
         except (IOError, OSError) as e:
-            print(f"Erreur lors de l'envoi vers NETY: {e}")
+            error_msg = f"Erreur lors de l'envoi vers NETY: {e}"
+            print(error_msg)
+            self._add_log(f"❌ {error_msg}")
             return False
 
     def check_for_admin_message(self) -> Optional[str]:
@@ -69,24 +101,35 @@ class NetyAdapter:
             str: La réponse du système
         """
         if not self.nety_running:
-            return "⚠️ L'IA NETY n'est pas démarrée"
+            msg = "⚠️ L'IA NETY n'est pas démarrée"
+            self._add_log(f"⚠️ Tentative de traitement de prompt alors que l'IA est arrêtée")
+            return msg
+        
+        self._add_log(f"🤖 Traitement du prompt ({len(prompt)} caractères)")
         
         # Simulation de traitement
         success = self.send_to_nety(prompt)
         if success:
             truncated = f"{prompt[:50]}..." if len(prompt) > 50 else prompt
-            return f"✓ Prompt reçu et traité ({len(prompt)} caractères): {truncated}"
+            response = f"✓ Prompt reçu et traité ({len(prompt)} caractères): {truncated}"
+            self._add_log(f"✅ Prompt traité avec succès")
+            return response
         else:
+            self._add_log(f"❌ Échec du traitement du prompt")
             return "❌ Erreur lors de l'envoi du prompt"
 
     def start_nety(self):
         """Démarre le système NETY"""
         self.nety_running = True
+        self._add_log("🚀 IA NETY démarrée")
+        self._add_log("✓ Initialisation des modules NETY...")
+        self._add_log("✓ Système prêt à recevoir des commandes")
         return True
 
     def stop_nety(self):
         """Arrête le système NETY"""
         self.nety_running = False
+        self._add_log("⏹️ IA NETY arrêtée")
         return True
 
     def is_running(self) -> bool:

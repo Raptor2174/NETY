@@ -2,6 +2,7 @@ import tkinter as tk
 from .taskbar import TaskbarView
 from .dashboard import DashboardView
 from .admin_room import AdminRoomView
+from .logs import LogsView
 from .error_404 import NotFoundView
 from app.services.nety_adapter import NetyAdapter
 
@@ -40,6 +41,8 @@ def launch_app():
             DashboardView(middle_frame, nety_adapter)
         elif page_id == "admin_room":
             AdminRoomView(middle_frame, nety_adapter)
+        elif page_id == "logs":
+            LogsView(middle_frame, nety_adapter)
         elif page_id == "404":
             NotFoundView(middle_frame)
 
