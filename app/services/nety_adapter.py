@@ -1,144 +1,167 @@
-from typing import Optional, List
-import os
-from datetime import datetime
+"""
+NETY Adapter - Interface entre le Dashboard Tkinter et l'IA NETY
+Utilise le NetyBridge pour la communication inter-threads
+"""
 
-
-def get_modules_status():
-    """Retourne le statut des modules NETY"""
-    return [
-        {"type": "CCM", "name": "TPM", "status": "running"},
-        {"type": "LCM", "name": "ESM", "status": "inactive"},
-        {"type": "BCM", "name": "IMCM", "status": "running"},
-        {"type": "CBM", "name": "LM", "status": "idle"},
-    ]
+from typing import Optional, List, Dict
+from nety.core.nety_bridge import bridge
 
 
 class NetyAdapter:
-    """Adaptateur pour communiquer avec le système NETY AI
-    
-    Note: Cette implémentation est une simulation. Les méthodes start_nety()
-    et stop_nety() ne démarrent pas réellement le système NETY, elles gèrent
-    seulement un état booléen pour l'interface utilisateur.
+    """
+    Adaptateur pour le Dashboard
+    Communique avec l'IA NETY via le NetyBridge (thread-safe)
     """
     
     def __init__(self):
-        self.nety_running = False
-        self.logs: List[str] = []
-        self._add_log("💡 Système NETY Dashboard initialisé")
-
-    def _add_log(self, message: str):
-        """Ajoute un message au journal des logs
+        """Initialise l'adaptateur en se connectant au Bridge"""
+        # Pas besoin de variables locales, tout passe par le Bridge
+        bridge._add_log("📱 NetyAdapter (Dashboard) connecté au Bridge")
+    
+    # ==========================================
+    # 📨 ENVOI VERS L'IA
+    # ==========================================
+    def send_to_nety(self, data: str, msg_type: str = "prompt") -> bool:
+        """
+        Envoie des données vers NETY via le Bridge
         
         Args:
-            message: Le message à ajouter
-        """
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_entry = f"[{timestamp}] {message}"
-        self.logs.append(log_entry)
-        # Limiter à 1000 entrées pour éviter une croissance infinie
-        if len(self.logs) > 1000:
-            self.logs.pop(0)
-
-    def get_logs(self) -> List[str]:
-        """Retourne tous les logs collectés
+            data: Contenu à envoyer
+            msg_type: Type de message ('prompt', 'command', 'chat')
         
         Returns:
-            List[str]: Liste des messages de log
-        """
-        return self.logs.copy()
-
-    def clear_logs(self):
-        """Efface tous les logs"""
-        self.logs.clear()
-        self._add_log("🗑️ Logs effacés")
-
-    def send_to_nety(self, data: str) -> bool:
-        """Envoie des données vers NETY
-        
-        Returns:
-            bool: True si l'envoi a réussi, False sinon
+            bool: True si envoyé avec succès
         """
         if not data:
             return False
-            
-        try:
-            with open("tmp_to_nety.txt", "w", encoding='utf-8') as f:
-                f.write(data)
-            self._add_log(f"📤 Données envoyées vers NETY: {data[:50]}...")
-            return True
-        except (IOError, OSError) as e:
-            error_msg = f"Erreur lors de l'envoi vers NETY: {e}"
-            print(error_msg)
-            self._add_log(f"❌ {error_msg}")
-            return False
-
-    def check_for_admin_message(self) -> Optional[str]:
-        """Vérifie s'il y a des messages depuis le dashboard
         
-        Returns:
-            Optional[str]: Le message lu, ou None si aucun message
-        """
-        try:
-            if os.path.exists("tmp_from_dashboard.txt"):
-                with open("tmp_from_dashboard.txt", "r", encoding='utf-8') as f:
-                    content = f.read().strip()
-                # Nettoyer le fichier après lecture seulement si non vide
-                if content:
-                    with open("tmp_from_dashboard.txt", "w", encoding='utf-8') as f:
-                        f.write("")
-                    return content
-        except (FileNotFoundError, IOError, OSError) as e:
-            print(f"Erreur lors de la lecture du message: {e}")
-        return None
-
+        return bridge.send_to_nety(data, msg_type=msg_type)
+    
     def process_prompt(self, prompt: str) -> str:
-        """Traite un prompt et retourne une réponse
+        """
+        Traite un prompt et attend une réponse
         
         Args:
             prompt: Le prompt à traiter
             
         Returns:
-            str: La réponse du système
+            str: La réponse du système ou message d'erreur
         """
-        if not self.nety_running:
-            msg = "⚠️ L'IA NETY n'est pas démarrée"
-            self._add_log(f"⚠️ Tentative de traitement de prompt alors que l'IA est arrêtée")
-            return msg
+        if not self.is_running():
+            return "⚠️ L'IA NETY n'est pas démarrée"
         
-        self._add_log(f"🤖 Traitement du prompt ({len(prompt)} caractères)")
+        # Envoyer le prompt
+        success = self.send_to_nety(prompt, msg_type="prompt")
         
-        # Simulation de traitement
-        success = self.send_to_nety(prompt)
-        if success:
-            truncated = f"{prompt[:50]}..." if len(prompt) > 50 else prompt
-            response = f"✓ Prompt reçu et traité ({len(prompt)} caractères): {truncated}"
-            self._add_log(f"✅ Prompt traité avec succès")
-            return response
-        else:
-            self._add_log(f"❌ Échec du traitement du prompt")
+        if not success:
             return "❌ Erreur lors de l'envoi du prompt"
-
+        
+        # Attendre la réponse (avec timeout)
+        import time
+        timeout = 5.0  # 5 secondes max
+        start_time = time.time()
+        
+        while (time.time() - start_time) < timeout:
+            response = bridge.get_from_nety(timeout=0.1)
+            if response and response.get("type") == "response":
+                return response.get("content", "Réponse vide")
+            time.sleep(0.05)
+        
+        return "⏱️ Timeout: Pas de réponse de l'IA"
+    
+    # ==========================================
+    # 📩 RÉCEPTION DEPUIS L'IA
+    # ==========================================
+    def check_for_nety_response(self) -> Optional[Dict]:
+        """
+        Vérifie s'il y a des réponses de l'IA
+        
+        Returns:
+            Dict ou None
+        """
+        return bridge.get_from_nety(timeout=0.01)
+    
+    # ==========================================
+    # 📝 LOGS
+    # ==========================================
+    def get_logs(self) -> List[str]:
+        """Récupère tous les logs depuis le Bridge"""
+        return bridge.get_logs()
+    
+    def clear_logs(self):
+        """Efface les logs"""
+        bridge.clear_logs()
+    
+    # ==========================================
+    # 🔧 ÉTAT DU SYSTÈME
+    # ==========================================
+    def is_running(self) -> bool:
+        """Retourne True si l'IA est en marche"""
+        return bridge.is_system_running()
+    
+    def is_brain_ready(self) -> bool:
+        """Retourne True si le Brain est initialisé"""
+        return bridge.is_brain_ready()
+    
     def start_nety(self):
-        """Démarre le système NETY"""
-        self.nety_running = True
-        self._add_log("🚀 IA NETY démarrée")
-        self._add_log("✓ Initialisation des modules NETY...")
-        self._add_log("✓ Système prêt à recevoir des commandes")
+        """
+        Note: Le démarrage réel se fait dans run.py
+        Cette méthode sert juste pour l'UI
+        """
+        bridge._add_log("ℹ️ Demande de démarrage depuis Dashboard (l'IA démarre via run.py)")
         return True
-
+    
     def stop_nety(self):
         """Arrête le système NETY"""
-        self.nety_running = False
-        self._add_log("⏹️ IA NETY arrêtée")
+        bridge.send_to_nety("stop", msg_type="command")
         return True
+    
+    # ==========================================
+    # 🔧 MODULES
+    # ==========================================
+    def get_modules_status(self) -> List[Dict[str, str]]:
+        """
+        Récupère l'état des modules depuis le Bridge
+        
+        Returns:
+            Liste de dicts avec 'type', 'name', 'status'
+        """
+        modules_dict = bridge.get_modules_status()
+        
+        # Convertir en format attendu par le Dashboard
+        modules_list = []
+        for code, status in modules_dict.items():
+            # Parser le code (ex: "CCM-1-TPM")
+            parts = code.split("-")
+            if len(parts) >= 3:
+                module_type = parts[0]
+                module_name = parts[2]
+                modules_list.append({
+                    "type": module_type,
+                    "name": module_name,
+                    "status": status
+                })
+        
+        # Si aucun module, retourner un exemple
+        if not modules_list:
+            return [
+                {"type": "CCM", "name": "Brain", "status": "active" if self.is_brain_ready() else "inactive"},
+                {"type": "LCM", "name": "Memory", "status": "inactive"},
+                {"type": "BCM", "name": "ML_Engine", "status": "active" if self.is_running() else "inactive"},
+            ]
+        
+        return modules_list
+    
+    # ==========================================
+    # 📊 STATISTIQUES
+    # ==========================================
+    def get_stats(self) -> Dict:
+        """Récupère les statistiques du système"""
+        return bridge.get_stats()
 
-    def is_running(self) -> bool:
-        """Retourne True si NETY est en cours d'exécution"""
-        return self.nety_running
 
-
-
- 
-
-
-
+# Fonction utilitaire pour compatibilité
+def get_modules_status():
+    """Fonction standalone pour récupérer les modules"""
+    adapter = NetyAdapter()
+    return adapter.get_modules_status()
