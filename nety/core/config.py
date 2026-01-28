@@ -22,6 +22,9 @@
 #   - 4.2. Le module d'apprentissage (Learning Module - LM)
 # Chaque module est conçu pour imiter une fonction spécifique du cerveau humain, permettant ainsi au système d'intelligence artificielle de traiter et de réagir aux informations de manière plus ordonnée et efficace, sere aussi de ligne directife pour le clean architecture.
 
+
+import time
+
 class Config(object):
     # General Settings
     APP_NAME = "Nety AI"
@@ -37,6 +40,14 @@ class Config(object):
 
     # API Settings
     API_HOST = "localhost"
+
+
+class BoucleSettings:    # Paramètres de la boucle principale
+    LOOP_DELAY = 0.05
+    # Intervalle de sommeil en secondes lorsque aucune donnée n'est reçue. 0.01=10ms, 0.1=100ms, 1=1s, 10=10s, 60=1min
+    MAX_RETRIES = 5       # Nombre maximum de tentatives pour valider les données
+    LOG_IDLE = False        # Activer/désactiver la journalisation lorsque le système est inactif
+
 
 
 class ModuleTags:

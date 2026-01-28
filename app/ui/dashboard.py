@@ -1,5 +1,5 @@
 import tkinter as tk
-from services.nety_adapter import get_modules_status
+from app.services.nety_adapter import get_modules_status
 
 class DashboardView:
     def __init__(self, root):

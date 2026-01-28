@@ -1,8 +1,8 @@
 import tkinter as tk
-from ui.taskbar import TaskbarView
-from ui.dashboard import DashboardView
-from ui.admin_room import AdminRoomView
-from ui.error_404 import NotFoundView
+from .taskbar import TaskbarView
+from .dashboard import DashboardView
+from .admin_room import AdminRoomView
+from .error_404 import NotFoundView
 
 def launch_app():
     root = tk.Tk()

@@ -1,21 +1,25 @@
-from nety.core.config import Config
-from nety.core.system_init import initialize_system
-
 import time
+from core.config import Config
+from core.system_init import initialize_system
 
+
+class BoucleSettings:
+    """
+    Paramètres de la boucle principale
+    """
+    LOOP_DELAY = 0.05        # 50 ms entre chaque itération
+    IDLE_LOG_INTERVAL = 40   # log toutes les 40 boucles sans données
 
 
 class NETYSystem:
     """
-    Classe principale orchestrant le cycle de vie de NETY :
-    - démarrage
-    - boucle principale
-    - arrêt
+    Système principal NETY
     """
 
     def __init__(self):
         self.config = Config()
         self.running = False
+        self.idle_counter = 0
 
     # ======================
     # DÉMARRAGE
@@ -32,53 +36,66 @@ class NETYSystem:
     # BOUCLE PRINCIPALE
     # ======================
     def run(self):
-        print(
-            f"Lancement de la boucle principale de {self.config.APP_NAME}"
-        )
+        print("Boucle principale NETY démarrée")
 
         while self.running:
-            input_data = self.receive_input()
+            input_data = self.check_for_input()
 
             if input_data is None:
-                time.sleep(0.1)
+                self.handle_idle()
+                time.sleep(BoucleSettings.LOOP_DELAY)
                 continue
 
+            self.idle_counter = 0  # reset dès qu’on reçoit quelque chose
+
             if not self.validate_input(input_data):
+                time.sleep(BoucleSettings.LOOP_DELAY)
                 continue
 
             processed_data = self.process_data(input_data)
 
             if not self.validate_output(processed_data):
+                time.sleep(BoucleSettings.LOOP_DELAY)
                 continue
 
             self.send_output(processed_data)
 
+            time.sleep(BoucleSettings.LOOP_DELAY)
+
+    # ======================
+    # GESTION IDLE
+    # ======================
+    def handle_idle(self):
+        self.idle_counter += 1
+
+        if self.idle_counter % BoucleSettings.IDLE_LOG_INTERVAL == 0:
+            print("En attente de données…")
+
     # ======================
     # ENTRÉES
     # ======================
-    def receive_input(self):
+    def check_for_input(self):
         """
-        Point d’entrée des données (mock pour l’instant).
-        À terme : texte, audio, image, etc.
+        Simulation d’entrée.
+        Retourner None = aucune donnée
         """
-        return "input_test"
+        return None  # <-- comportement réel attendu pour l’instant
 
     def validate_input(self, data) -> bool:
-        print(f"Validation de l'entrée : {data}")
+        print(f"Validation entrée : {data}")
         return True
 
     # ======================
     # TRAITEMENT
     # ======================
     def process_data(self, data):
-        print(f"Traitement des données : {data}")
+        print(f"Traitement : {data}")
         return f"processed_{data}"
 
     # ======================
     # SORTIES
     # ======================
     def validate_output(self, data) -> bool:
-        print(f"Validation de la sortie : {data}")
         return True
 
     def send_output(self, output_data):
@@ -106,3 +123,4 @@ if __name__ == "__main__":
         nety.run()
     except KeyboardInterrupt:
         nety.stop()
+
