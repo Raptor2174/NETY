@@ -1,4 +1,4 @@
-# nety/core/nety_brain.py
+# nety/core/brain.py
 
 from nety.cortex_limbic.limbic_filter import LimbicFilter
 from nety.cortex_limbic.memory_manager import MemoryManager
@@ -6,10 +6,11 @@ from nety.knowledge_base.knowledge_manager import KnowledgeManager
 from nety.core.intent_analyzer import IntentAnalyzer
 from nety.core.response_generator import ResponseGenerator
 
-class NETYBrain:
+
+class Brain:
     """
     Le cerveau principal de NETY
-    Orchestre tous les modules
+    Orchestre tous les modules et gère l'interaction avec le système
     """
     
     def __init__(self):
@@ -19,6 +20,44 @@ class NETYBrain:
         self.knowledge = KnowledgeManager()
         self.intent_analyzer = IntentAnalyzer()
         self.response_generator = ResponseGenerator()
+        
+        # Historique des interactions pour get_context()
+        self.context_history = []
+        
+        # État des modules
+        self.modules_status = {
+            "cortex_limbic": "actif",
+            "memory": "actif",
+            "knowledge_base": "actif",
+            "intent_analyzer": "actif"
+        }
+    
+    def think(self, message: str) -> str:
+        """
+        Méthode principale pour traiter un message
+        C'est l'entrée principale du Brain depuis le système NETY
+        
+        Args:
+            message: Le message ou les données à traiter
+        
+        Returns:
+            La réponse générée par le Brain
+        """
+        # Stocker l'entrée
+        interaction = {"input": message}
+        
+        # Traiter le message via le pipeline complet
+        response = self.process_message(message)
+        
+        # Stocker la sortie
+        interaction["output"] = response
+        self.context_history.append(interaction)
+        
+        # Limiter l'historique à 100 interactions
+        if len(self.context_history) > 100:
+            self.context_history = self.context_history[-100:]
+        
+        return response
     
     def process_message(self, message: str) -> str:
         """Pipeline complet de traitement"""
@@ -73,3 +112,27 @@ class NETYBrain:
         """Met à jour la mémoire"""
         summary = f"User: {message[:50]}... | Response: {response[:50]}..."
         self.memory.add_memory(summary)
+    
+    def get_modules_status(self) -> dict:
+        """
+        Retourne l'état de tous les modules du Brain
+        Utilisé par le système pour synchroniser avec le Dashboard
+        
+        Returns:
+            Dictionnaire {module_name: status}
+        """
+        return self.modules_status.copy()
+    
+    def get_context(self) -> list:
+        """
+        Retourne l'historique des interactions (contexte)
+        Utilisé pour les tests et le debugging
+        
+        Returns:
+            Liste des interactions {input, output}
+        """
+        return self.context_history.copy()
+
+
+# Alias pour compatibilité
+NETYBrain = Brain
