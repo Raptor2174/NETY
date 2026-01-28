@@ -3,7 +3,10 @@ Test du Bridge de communication Dashboard ↔ NETY
 """
 
 import sys
-sys.path.insert(0, '/home/runner/work/NETY/NETY')
+import os
+
+# Ajouter le répertoire parent au path de manière portable
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from nety.core.nety_bridge import bridge
 import time

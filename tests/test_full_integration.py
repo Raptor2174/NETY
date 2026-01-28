@@ -3,11 +3,17 @@ Test d'intégration complète: Dashboard → Brain → Dashboard
 """
 
 import sys
-sys.path.insert(0, '/home/runner/work/NETY/NETY')
+import os
+
+# Ajouter le répertoire parent au path de manière portable
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from nety.main import NETYSystem
 from nety.core.nety_bridge import bridge
 import time
+
+# Timeout configurable pour les tests
+TEST_TIMEOUT = 1.0
 
 print("=" * 60)
 print("TEST: Intégration complète Dashboard ↔ Brain")
@@ -28,7 +34,7 @@ print(f"   ✅ Message envoyé: '{test_message}'")
 
 # Traiter le message comme le ferait la boucle principale
 print("\n3. Traitement par le système...")
-dashboard_message = bridge.get_from_dashboard(timeout=0.1)
+dashboard_message = bridge.get_from_dashboard(timeout=TEST_TIMEOUT)
 if dashboard_message:
     print(f"   ✅ Message récupéré: {dashboard_message['type']}")
     
@@ -37,7 +43,7 @@ if dashboard_message:
     print("   ✅ Message traité par le Brain")
     
     # Récupérer la réponse
-    response = bridge.get_from_nety(timeout=0.1)
+    response = bridge.get_from_nety(timeout=TEST_TIMEOUT)
     if response:
         print(f"   ✅ Réponse générée: '{response['content']}'")
     else:
@@ -65,10 +71,10 @@ if nety.brain:
 # Tester avec un autre type de message
 print("\n6. Test avec un message de type 'chat'...")
 bridge.send_to_nety("Quelle est ta mission ?", msg_type="chat")
-chat_msg = bridge.get_from_dashboard(timeout=0.1)
+chat_msg = bridge.get_from_dashboard(timeout=TEST_TIMEOUT)
 if chat_msg:
     nety.handle_dashboard_message(chat_msg)
-    response = bridge.get_from_nety(timeout=0.1)
+    response = bridge.get_from_nety(timeout=TEST_TIMEOUT)
     if response:
         print(f"   ✅ Réponse au chat: '{response['content']}'")
 

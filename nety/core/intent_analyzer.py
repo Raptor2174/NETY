@@ -32,7 +32,16 @@ class IntentAnalyzer:
         
         message_lower = message.lower().strip()
         
-        # Détection simple par mots-clés
+        # Détection spécifique pour les questions (priorité haute)
+        if "?" in message:
+            return {
+                "type": "question",
+                "confidence": 0.9,
+                "entities": self._extract_entities(message),
+                "original_message": message
+            }
+        
+        # Détection par mots-clés (priorité moyenne)
         detected_intent = "statement"  # Par défaut
         confidence = 0.5
         
@@ -41,14 +50,13 @@ class IntentAnalyzer:
                 if keyword in message_lower:
                     detected_intent = intent_type
                     confidence = 0.8
-                    break
-            if confidence > 0.5:
-                break
-        
-        # Détection spécifique pour les questions (point d'interrogation)
-        if "?" in message:
-            detected_intent = "question"
-            confidence = 0.9
+                    # Sortir dès la première correspondance trouvée
+                    return {
+                        "type": detected_intent,
+                        "confidence": confidence,
+                        "entities": self._extract_entities(message),
+                        "original_message": message
+                    }
         
         return {
             "type": detected_intent,

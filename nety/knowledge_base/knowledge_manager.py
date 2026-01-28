@@ -95,5 +95,10 @@ class KnowledgeManager:
         if category not in self.knowledge_base:
             self.knowledge_base[category] = {}
         
-        if isinstance(self.knowledge_base[category], dict):
-            self.knowledge_base[category][key] = value
+        # Vérifier que la catégorie est bien un dictionnaire
+        if not isinstance(self.knowledge_base[category], dict):
+            # Convertir en dictionnaire si ce n'est pas le cas
+            old_value = self.knowledge_base[category]
+            self.knowledge_base[category] = {"_default": old_value}
+        
+        self.knowledge_base[category][key] = value
