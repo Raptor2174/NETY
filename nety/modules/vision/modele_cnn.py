@@ -2,6 +2,8 @@
 Module de réseau de neurones convolutionnel (CNN) pour le traitement d'images.
 
 Ce module implémente un CNN à 5 couches de convolution pour la classification d'images.
+
+Fichier reutiliser depuis l'ancienne version de NETY. ! attention aux compatibilités !
 """
 
 import torch

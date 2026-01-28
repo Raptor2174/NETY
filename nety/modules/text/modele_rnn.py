@@ -3,10 +3,13 @@
 Module de réseau de neurones récurrent (RNN) pour le traitement de texte.
 
 Ce module implémente un LSTM pour le traitement séquentiel de données textuelles.
+
+Fichier reutiliser depuis l'ancienne version de NETY. ! attention aux compatibilités !
 """
 
 import torch
 import torch.nn as nn
+
 
 
 class ModeleRNN(nn.Module):

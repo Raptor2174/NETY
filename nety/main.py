@@ -1,4 +1,6 @@
 import time
+
+from nety.core.brain import Brain
 from .core.config import Config
 from .core.system_init import initialize_system
 
@@ -20,6 +22,7 @@ class NETYSystem:
         self.config = Config()
         self.running = False
         self.idle_counter = 0
+        self.brain = None  # Initialisation différée
 
     # ======================
     # DÉMARRAGE
@@ -31,6 +34,8 @@ class NETYSystem:
         )
         initialize_system()
         self.running = True
+
+        self.brain = Brain()
 
     # ======================
     # BOUCLE PRINCIPALE
@@ -89,6 +94,8 @@ class NETYSystem:
     # TRAITEMENT
     # ======================
     def process_data(self, data):
+        if self.brain:
+            return self.brain.think(data)
         print(f"Traitement : {data}")
         return f"processed_{data}"
 
