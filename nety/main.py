@@ -1,5 +1,7 @@
-from .core.config import Config
-from .core.system_init import initialize_system
+from nety.core.config import Config
+from nety.core.system_init import initialize_system
+
+import time
 
 
 
@@ -36,6 +38,10 @@ class NETYSystem:
 
         while self.running:
             input_data = self.receive_input()
+
+            if input_data is None:
+                time.sleep(0.1)
+                continue
 
             if not self.validate_input(input_data):
                 continue
