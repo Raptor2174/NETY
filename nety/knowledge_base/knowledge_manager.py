@@ -8,6 +8,11 @@ from typing import List, Dict, Optional, Any
 
 from .database_connector import DatabaseConnector
 from .database_config import DatabaseConfig
+from typing import Any as ChromaClient
+try:
+    from redis import Redis
+except ImportError:
+    Redis = Any
 
 
 class KnowledgeManager:
@@ -18,8 +23,8 @@ class KnowledgeManager:
     
     def __init__(self):
         self.sqlite_conn = DatabaseConnector.get_sqlite_connection()
-        self.chroma_client = DatabaseConnector.get_chroma_client()
-        self.redis_client = DatabaseConnector.get_redis_client()
+        self.chroma_client: Any = DatabaseConnector.get_chroma_client()
+        self.redis_client: Optional[Any] = DatabaseConnector.get_redis_client()
         
         # Lazy loading de l'embedding model
         self._embedding_model = None
@@ -49,10 +54,10 @@ class KnowledgeManager:
         self,
         title: str,
         content: str,
-        category: str = None,
-        source: str = None,
-        tags: List[str] = None,
-        metadata: Dict = None
+        category: Optional[str] = None,
+        source: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict] = None
     ) -> int:
         """
         Ajoute une nouvelle connaissance à la base
@@ -79,7 +84,7 @@ class KnowledgeManager:
                 VALUES (?, ?, ?, ?, ?, ?)
             """, (title, content, category, source, tags_str, metadata_str))
             
-            knowledge_id = cursor.lastrowid
+            knowledge_id = cursor.lastrowid or 0
         
         # Ajouter l'embedding dans Chroma si disponible
         if self.knowledge_collection:
@@ -128,12 +133,12 @@ class KnowledgeManager:
     def update_knowledge(
         self,
         knowledge_id: int,
-        title: str = None,
-        content: str = None,
-        category: str = None,
-        source: str = None,
-        tags: List[str] = None,
-        metadata: Dict = None
+        title: Optional[str] = None,
+        content: Optional[str] = None,
+        category: Optional[str] = None,
+        source: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        metadata: Optional[Dict] = None
     ) -> bool:
         """
         Met à jour une connaissance existante
@@ -233,8 +238,8 @@ class KnowledgeManager:
     
     def search_knowledge(
         self,
-        query: str = None,
-        category: str = None,
+        query: Optional[str] = None,
+        category: Optional[str] = None,
         limit: int = 10,
         semantic: bool = True
     ) -> List[Dict]:
@@ -296,7 +301,7 @@ class KnowledgeManager:
             cursor.execute(sql, params)
             rows = cursor.fetchall()
             
-        return [self._row_to_dict(row) for row in rows]
+        return [d for d in [self._row_to_dict(row) for row in rows] if d is not None]
     
     def get_all_knowledge(self, limit: int = 100) -> List[Dict]:
         """
@@ -317,7 +322,7 @@ class KnowledgeManager:
             
             rows = cursor.fetchall()
             
-        return [self._row_to_dict(row) for row in rows]
+        return [d for d in [self._row_to_dict(row) for row in rows] if d is not None]
     
     # =====================
     # GESTION DES CONVERSATIONS
@@ -327,9 +332,9 @@ class KnowledgeManager:
         self,
         user_input: str,
         nety_response: str,
-        context: str = None,
-        session_id: str = None,
-        metadata: Dict = None
+        context: Optional[str] = None,
+        session_id: Optional[str] = None,
+        metadata: Optional[Dict] = None
     ) -> int:
         """
         Sauvegarde une conversation
@@ -353,7 +358,7 @@ class KnowledgeManager:
                 VALUES (?, ?, ?, ?, ?)
             """, (user_input, nety_response, context, session_id, metadata_str))
             
-            conversation_id = cursor.lastrowid
+            conversation_id = cursor.lastrowid or 0
         
         # Ajouter l'embedding de la conversation dans Chroma
         if self.conversations_collection:
@@ -375,7 +380,7 @@ class KnowledgeManager:
     
     def get_conversation_history(
         self,
-        session_id: str = None,
+        session_id: Optional[str] = None,
         limit: int = 50
     ) -> List[Dict]:
         """
@@ -402,13 +407,13 @@ class KnowledgeManager:
             cursor.execute(sql, params)
             rows = cursor.fetchall()
         
-        return [self._row_to_dict(row) for row in rows]
+        return [d for d in [self._row_to_dict(row) for row in rows] if d is not None]
     
     # =====================
     # UTILITAIRES
     # =====================
     
-    def _row_to_dict(self, row) -> Dict:
+    def _row_to_dict(self, row) -> Optional[Dict]:
         """Convertit une Row SQLite en dictionnaire"""
         if row is None:
             return None
@@ -464,3 +469,8 @@ class KnowledgeManager:
         }
         
         return stats
+
+    def search(self, message: str, intent: dict) -> dict:
+        """Search knowledge base for relevant information"""
+        # Implement search logic here
+        return {}

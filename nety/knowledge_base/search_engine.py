@@ -17,7 +17,7 @@ class SearchEngine:
     def search(
         self,
         query: str,
-        category: str = None,
+        category: Optional[str] = None,
         limit: int = 10,
         use_semantic: bool = True
     ) -> List[Dict]:
@@ -33,12 +33,14 @@ class SearchEngine:
         Returns:
             Liste de résultats de recherche
         """
-        return self.knowledge_manager.search_knowledge(
-            query=query,
-            category=category,
-            limit=limit,
-            semantic=use_semantic
-        )
+        kwargs = {
+            "query": query,
+            "limit": limit,
+            "semantic": use_semantic
+        }
+        if category is not None:
+            kwargs["category"] = category
+        return self.knowledge_manager.search_knowledge(**kwargs)
     
     def find_similar(
         self,
