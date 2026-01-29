@@ -103,9 +103,18 @@ class NETYBrainWithRNN:
         
         # 1. Retrieve context from KB
         print("\n📚 Étape 1: Récupération du contexte...")
-        context = self.search.get_context_for_query(question, max_results=2)
+        # Extract keywords from question for better search
+        # Simple keyword extraction: look for capitalized words or remove common words
+        keywords = question.lower()
+        for word in ["qu'est-ce que", "c'est quoi", "qui est", "parle-moi des", "parle moi de"]:
+            keywords = keywords.replace(word, "")
+        keywords = keywords.strip().strip("?").strip()
         
-        if context:
+        # Use non-semantic search as fallback when Chroma is not available
+        results = self.search.search(keywords, limit=2, use_semantic=False)
+        
+        if results:
+            context = "\n\n".join([f"[{r['title']}]\n{r['content']}" for r in results])
             print(f"   ✅ Contexte trouvé ({len(context)} caractères)")
             print(f"   Aperçu: {context[:100]}...")
         else:
@@ -210,16 +219,25 @@ def main():
         print(result['answer'])
         print()
         
-        input("Appuyez sur Entrée pour continuer...")
+        try:
+            input("Appuyez sur Entrée pour continuer...")
+        except EOFError:
+            # Non-interactive mode, continue automatically
+            pass
     
     # Interactive mode
     print("\n" + "="*70)
     print(" Voulez-vous passer en mode interactif? (y/n)")
     print("="*70)
     
-    choice = input("Votre choix: ")
-    if choice.lower() in ['y', 'yes', 'o', 'oui']:
-        nety.interactive_mode()
+    try:
+        choice = input("Votre choix: ")
+        if choice.lower() in ['y', 'yes', 'o', 'oui']:
+            nety.interactive_mode()
+    except EOFError:
+        # Non-interactive mode, exit gracefully
+        print("\n👋 Mode non-interactif détecté. Fin de la démo.")
+
 
 
 if __name__ == "__main__":
