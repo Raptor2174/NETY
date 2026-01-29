@@ -473,15 +473,7 @@ class KnowledgeManager:
         
         return stats
 
-    def search(self, message: str, intent: dict) -> dict:
-        """Search knowledge base for relevant information"""
-        # Implement search logic here
-        return {}
-    Gère la base de connaissances de NETY
-    Recherche et récupère les informations pertinentes
-    """
-    
-    def __init__(self) -> None:
+    def initialize_knowledge_base(self) -> None:
         # Base de connaissances simple (à étendre avec une vraie base de données)
         self.knowledge_base: Dict[str, Dict[str, str]] = {
             "identité": {
@@ -557,9 +549,9 @@ class KnowledgeManager:
         keywords = category_keywords.get(category, [])
         return any(keyword in query for keyword in keywords)
     
-    def add_knowledge(self, category: str, key: str, value: str) -> None:
+    def add_simple_knowledge(self, category: str, key: str, value: str) -> None:
         """
-        Ajoute une nouvelle connaissance à la base
+        Ajoute une nouvelle connaissance simple à la base
         
         Args:
             category: Catégorie de la connaissance

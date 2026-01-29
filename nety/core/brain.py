@@ -2,31 +2,15 @@
 Module Brain - Cerveau central de NETY
 """
 # nety/core/brain.py
+from nety.cortex_limbic.limbic_filter import LimbicFilter
+from nety.cortex_limbic.memory_manager import MemoryManager
+from nety.knowledge_base.knowledge_manager import KnowledgeManager
+from nety.core.intent_analyzer import IntentAnalyzer
+from nety.core.response_generator import ResponseGenerator
 
 
 class Brain:
-    """
-    Le cerveau principal de NETY
-    Orchestre tous les modules et gère l'interaction avec le système
-    """
-    
-    def __init__(self):
-        """Initialise le Brain et ses modules"""
-        self.modules = {}
-        self.state = "initialized"
-        self.memory = []
-        self.context = {}
-        print("🧠 Brain initialisé")
-    
-    def think(self, input_data):
-        """
-        Traite une donnée d'entrée
-
-class Brain:
-    """
-    Le cerveau principal de NETY
-    Orchestre tous les modules et gère l'interaction avec le système
-    """
+    """Le cerveau principal de NETYOrchestre tous les modules et gère l'interaction avec le système"""
     
     def __init__(self):
         # Initialisation des modules
@@ -74,6 +58,15 @@ class Brain:
         
         return response
     
+    def retrieve_context(self, message: str, intent: dict) -> dict:
+        """Récupère le contexte basé sur le message et l'intention"""
+        context = {
+            "message": message,
+            "intent": intent,
+            "history": self.context_history[-5:] if self.context_history else []
+        }
+        return context
+    
     def process_message(self, message: str) -> str:
         """Pipeline complet de traitement"""
         
@@ -93,35 +86,11 @@ class Brain:
             personality_filter
         )
         
-        Args:
-            input_data: Données à traiter (str, dict, etc.)
-            
-        Returns:
-            Résultat du traitement
-        """
-        # Logique de traitement basique
-        if isinstance(input_data, str):
-            response = f"Brain a traité: {input_data}"
-        else:
-            response = f"Brain a traité: {str(input_data)}"
-        
-        # Sauvegarder en mémoire
-        self.add_to_memory(input_data, response)
-        
         return response
     
-    def get_modules_status(self):
-        """
-        Retourne l'état de tous les modules
-        
-        Returns:
-            dict: État des modules
-        """
-        return {
-            "brain": self.state,
-            "modules_count": len(self.modules),
-            "active": True
-        }
+def get_modules_status(self):
+    """Retourne l'état de tous les modules"""
+    return self.modules_status.copy()
     
     def register_module(self, name, module):
         """Enregistre un nouveau module"""
@@ -200,25 +169,15 @@ class Brain:
         summary = f"User: {message[:50]}... | Response: {response[:50]}..."
         self.memory.add_memory(summary)
     
-    def get_modules_status(self) -> dict:
-        """
-        Retourne l'état de tous les modules du Brain
-        Utilisé par le système pour synchroniser avec le Dashboard
-        
-        Returns:
-            Dictionnaire {module_name: status}
-        """
-        return self.modules_status.copy()
+def get_context(self) -> list:
+    """
+    Retourne l'historique des interactions (contexte)
+    Utilisé pour les tests et le debugging
     
-    def get_context(self) -> list:
-        """
-        Retourne l'historique des interactions (contexte)
-        Utilisé pour les tests et le debugging
-        
-        Returns:
-            Liste des interactions {input, output}
-        """
-        return self.context_history.copy()
+    Returns:
+        Liste des interactions {input, output}
+    """
+    return self.context_history.copy()
 
 
 # Alias pour compatibilité
