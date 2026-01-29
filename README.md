@@ -110,6 +110,52 @@ Les données seront collectées à partir de :
 - APIs ouvertes
 - Données Open Source
 
+## 💾 Base de Connaissances
+
+NETY intègre un système de base de connaissances extensible pour stocker et récupérer des informations de manière intelligente.
+
+### Solutions Open Source Utilisées
+
+1. **SQLite** - Base de données relationnelle pour données structurées
+2. **Chroma DB** - Base vectorielle pour recherche sémantique
+3. **Redis** (optionnel) - Cache haute performance
+
+### Fonctionnalités
+
+- ✅ Stockage de connaissances avec métadonnées
+- ✅ Recherche sémantique par similarité
+- ✅ Historique des conversations
+- ✅ Support RAG (Retrieval-Augmented Generation)
+- ✅ API simple et intuitive
+
+### Utilisation
+
+```python
+from nety.knowledge_base import init_databases, KnowledgeManager, SearchEngine
+
+# Initialiser les bases
+init_databases()
+
+# Ajouter une connaissance
+km = KnowledgeManager()
+km.add_knowledge(
+    title="Titre",
+    content="Contenu de la connaissance",
+    category="categorie"
+)
+
+# Rechercher
+search = SearchEngine()
+results = search.search("ma recherche")
+
+# Obtenir du contexte pour RAG
+context = search.get_context_for_query("ma question")
+```
+
+Pour plus de détails, consultez :
+- [Documentation des bases de données](documentation/DATABASE_SOLUTIONS.md)
+- [Exemple d'utilisation](examples/knowledge_base_demo.py)
+
 ## 🧠 Modèles Utilisés
 
 ### Traitement de Texte (RNN)

@@ -56,6 +56,13 @@ data/models/
 data/raw/
 data/processed/
 
+# Databases (local development)
+data/databases/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
 # OS
 .DS_Store
 Thumbs.db
