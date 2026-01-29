@@ -12,7 +12,7 @@ class ResponseGenerator:
         )
     
     def generate(self, message: str, context: Optional[dict] = None, 
-                 limbic_filter: Optional[dict] = None) -> str:
+             limbic_filter: Optional[dict] = None) -> str:
         """Génère une réponse avec les contraintes limbiques"""
         
         if context is None:
@@ -23,15 +23,30 @@ class ResponseGenerator:
         # Construire le prompt
         system_prompt = self._build_prompt(limbic_filter)
         
+        # 🆕 RÉCUPÉRER L'HISTORIQUE
+        history = context.get('history', [])
+        history_text = ""
+        
+        if history:
+            # Prendre les 3 dernières interactions
+            for interaction in history[-3:]:
+                user_msg = interaction.get('input', '')
+                bot_msg = interaction.get('output', '')
+                history_text += f"Utilisateur: {user_msg}\nNETY: {bot_msg}\n\n"
+        
         # Enrichir avec le contexte
         knowledge = context.get('knowledge', '')
+        
         full_prompt = f"""{system_prompt}
 
-CONNAISSANCES:
+{"CONVERSATION PRÉCÉDENTE:" if history_text else ""}
+{history_text}
+
+{"CONNAISSANCES PERTINENTES:" if knowledge else ""}
 {knowledge}
 
-MESSAGE: {message}
-RÉPONSE:"""
+Utilisateur: {message}
+NETY:"""
         
         # Appel LLM
         response = self._call_llm(full_prompt)
@@ -68,3 +83,6 @@ RÈGLES: {rules}"""
         except Exception as e:
             print(f"❌ Erreur LLM: {e}")
             return "Erreur de génération."
+        
+
+    
