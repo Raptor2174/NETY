@@ -187,6 +187,23 @@ flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 pytest
 ```
 
+## 🧪 Tests et Démonstrations
+
+### Tester le RNN standalone
+```bash
+pytest tests/test_rnn_standalone.py -v
+```
+
+### Tester RNN + Knowledge Base
+```bash
+pytest tests/test_rnn_with_kb.py -v
+```
+
+### Démonstration complète Brain + RNN + KB
+```bash
+python examples/brain_rnn_complete_demo.py
+```
+
 ## 📚 Documentation
 
 Consultez le dossier `documentation/` pour plus de détails sur :

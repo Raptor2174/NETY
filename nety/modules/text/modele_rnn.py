@@ -71,8 +71,9 @@ class ModeleRNN(nn.Module):
         return out
 
 
-# Créer une instance du modèle
-modele_rnn = ModeleRNN(input_size=10, hidden_size=64, output_size=1)
-
-# Afficher la structure du modèle
-print(modele_rnn)
+if __name__ == "__main__":
+    # Créer une instance du modèle
+    modele_rnn = ModeleRNN(input_size=10, hidden_size=64, output_size=1)
+    
+    # Afficher la structure du modèle
+    print(modele_rnn)
