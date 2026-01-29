@@ -47,28 +47,46 @@ class Brain:
         Returns:
             La réponse générée par le Brain
         """
-        # Stocker l'entrée
-        interaction = {"input": message}
-        
-        # Traiter le message via le pipeline complet
-        response = self.process_message(message)
-        
-        # Stocker la sortie
-        interaction["output"] = response
-        self.context_history.append(interaction)
-        
-        # Limiter l'historique à 100 interactions
-        if len(self.context_history) > 100:
-            self.context_history = self.context_history[-100:]
-        
-        return response
+        try:
+            # Stocker l'entrée
+            interaction = {"input": message}
+            
+            # Traiter le message via le pipeline complet
+            response = self.process_message(message)
+            
+            # Stocker la sortie
+            interaction["output"] = response
+            self.context_history.append(interaction)
+            
+            # Limiter l'historique à 100 interactions
+            if len(self.context_history) > 100:
+                self.context_history = self.context_history[-100:]
+            
+            return response
+        except Exception as e:
+            error_msg = f"Erreur dans Brain.think(): {type(e).__name__}: {str(e)}"
+            print(f"❌ {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return f"Erreur de traitement: {str(e)}"
     
     def retrieve_context(self, message: str, intent: dict) -> dict:
         """Récupère le contexte basé sur le message et l'intention"""
+        # Rechercher des connaissances pertinentes
+        knowledge_content = ""
+        try:
+            # Essayer de rechercher des connaissances pertinentes
+            if self.knowledge and hasattr(self.knowledge, 'search'):
+                results = self.knowledge.search(message, limit=3)
+                knowledge_content = "\n".join([r.get('content', '') for r in results]) if results else ""
+        except Exception as e:
+            knowledge_content = f"Erreur lecture KB: {str(e)}"
+        
         context = {
             "message": message,
             "intent": intent,
-            "history": self.context_history[-5:] if self.context_history else []
+            "history": self.context_history[-5:] if self.context_history else [],
+            "knowledge": knowledge_content
         }
         return context
     

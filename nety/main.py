@@ -165,13 +165,20 @@ class NETYSystem:
     def process_data(self, data):
         """Traite les données avec le Brain"""
         if self.brain:
-            result = self.brain.think(data)
-            
-            # Synchroniser l'état des modules
-            modules_status = self.brain.get_modules_status()
-            bridge.update_modules_status(modules_status)
-            
-            return result
+            try:
+                result = self.brain.think(data)
+                
+                # Synchroniser l'état des modules
+                modules_status = self.brain.get_modules_status()
+                bridge.update_modules_status(modules_status)
+                
+                return result
+            except Exception as e:
+                error_msg = f"Erreur lors du traitement: {type(e).__name__}: {str(e)}"
+                bridge._add_log(f"❌ {error_msg}")
+                import traceback
+                traceback.print_exc()
+                return f"❌ Erreur: {str(e)}"
         
         return f"processed_{data}"
 

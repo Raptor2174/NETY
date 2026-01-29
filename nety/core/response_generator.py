@@ -1,23 +1,39 @@
-
-
 # nety/core/response_generator.py
+from typing import Optional
+from nety.cortex_limbic.limbic_filter import LimbicFilter
+from nety.knowledge_base.knowledge_manager import KnowledgeManager
 
 class ResponseGenerator:
     """Génère les réponses de NETY"""
     
-    def generate(self, message: str, context: dict, 
-                 limbic_filter: dict) -> str:
-        """Génère une réponse avec les contraintes limbiques"""
+    def generate(self, message: str, context: dict = None, additional_param: str = None) -> str:
+        """Generate a response based on message and context."""
+        if context is None:
+            context = {}
+        
+        # Safely access knowledge with a default value
+        knowledge = context.get('knowledge', '')
+        limbic_filter = context.get('limbic_filter', {'tone': 'neutral', 'behavior_rules': ''})
+        
+        # Use the knowledge variable in your prompt/logic
+        # Example:
+        prompt = f"""
+        Context knowledge: {knowledge}
+        User message: {message}
+        
+        Generate an appropriate response.
+        """
         
         # Construire le prompt
         system_prompt = self._build_prompt(limbic_filter)
         
         # Enrichir avec le contexte
+        knowledge_text = context.get('knowledge', 'Aucune connaissance disponible')
         full_prompt = f"""
 {system_prompt}
 
 CONNAISSANCES:
-{context['knowledge']}
+{knowledge_text}
 
 MESSAGE: {message}
 """
