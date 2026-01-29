@@ -155,8 +155,20 @@ class KnowledgeManager:
         new_content = content if content is not None else current["content"]
         new_category = category if category is not None else current["category"]
         new_source = source if source is not None else current["source"]
-        new_tags = json.dumps(tags) if tags is not None else current["tags"]
-        new_metadata = json.dumps(metadata) if metadata is not None else current["metadata"]
+        
+        # Pour tags et metadata, nous devons les convertir en JSON
+        # current["tags"] et current["metadata"] sont déjà des objets Python (parsés par _row_to_dict)
+        if tags is not None:
+            new_tags = json.dumps(tags)
+        else:
+            # Reconvertir les tags actuels en JSON
+            new_tags = json.dumps(current["tags"]) if current.get("tags") else None
+        
+        if metadata is not None:
+            new_metadata = json.dumps(metadata)
+        else:
+            # Reconvertir les metadata actuels en JSON
+            new_metadata = json.dumps(current["metadata"]) if current.get("metadata") else None
         
         # Mettre à jour dans SQLite
         with DatabaseConnector.sqlite_cursor() as cursor:
