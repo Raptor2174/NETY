@@ -8,7 +8,8 @@ class ResponseGenerator:
         # Charger le modèle une seule fois
         self.generator = pipeline(
             "text-generation", 
-            model="bigscience/bloomz-560m"
+            model="bigscience/bloomz-1b7", 
+            device="cpu"  # Utiliser "cuda" si GPU disponible
         )
     
     def generate(self, message: str, context: Optional[dict] = None, 
