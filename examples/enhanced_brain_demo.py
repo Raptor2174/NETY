@@ -4,6 +4,7 @@ Ce fichier montre comment enrichir les réponses de NETY avec des connaissances 
 """
 
 from nety.knowledge_base import KnowledgeManager, SearchEngine, init_databases
+from typing import Optional
 
 
 class EnhancedBrain:
@@ -67,7 +68,7 @@ class EnhancedBrain:
         
         print("✅ Base de connaissances initialisée avec succès")
     
-    def think(self, user_input: str, session_id: str = None) -> str:
+    def think(self, user_input: str, session_id: Optional[str] = None) -> str:
         """
         Processus de réflexion enrichi par la base de connaissances
         

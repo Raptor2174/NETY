@@ -112,7 +112,7 @@ def main():
     
     # Recherche 2: Par catégorie
     print("\n🔍 Recherche 2 : Catégorie 'deep_learning'")
-    results = search.search(None, category="deep_learning")
+    results = search.search("", category="deep_learning")
     print(f"   Nombre de résultats : {len(results)}")
     for i, result in enumerate(results, 1):
         print(f"   {i}. {result['title']}")
