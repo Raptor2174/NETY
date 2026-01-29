@@ -30,6 +30,11 @@ class Brain:
             "knowledge_base": "actif",
             "intent_analyzer": "actif"
         }
+        
+        # Dictionnaire des modules pour compatibilité
+        self.modules = {}
+        self.context = {}
+        self.state = "active"
     
     def think(self, message: str) -> str:
         """
@@ -88,9 +93,9 @@ class Brain:
         
         return response
     
-def get_modules_status(self):
-    """Retourne l'état de tous les modules"""
-    return self.modules_status.copy()
+    def get_modules_status(self):
+        """Retourne l'état de tous les modules"""
+        return self.modules_status.copy()
     
     def register_module(self, name, module):
         """Enregistre un nouveau module"""
@@ -164,21 +169,22 @@ def get_modules_status(self):
     def set_state(self, new_state):
         """Définit un nouvel état"""
         self.state = new_state
+    
     def update_memory(self, message: str, response: str):
         """Met à jour la mémoire"""
         summary = f"User: {message[:50]}... | Response: {response[:50]}..."
         self.memory.add_memory(summary)
     
-def get_context(self) -> list:
-    """
-    Retourne l'historique des interactions (contexte)
-    Utilisé pour les tests et le debugging
-    
-    Returns:
-        List of interactions with {input, output} keys
-        Liste des interactions {input, output}
-    """
-    return self.context_history.copy()
+    def get_context(self) -> list:
+        """
+        Retourne l'historique des interactions (contexte)
+        Utilisé pour les tests et le debugging
+        
+        Returns:
+            List of interactions with {input, output} keys
+            Liste des interactions {input, output}
+        """
+        return self.context_history.copy()
 
 
 # Alias pour compatibilité
