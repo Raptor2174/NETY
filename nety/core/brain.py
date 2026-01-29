@@ -4,7 +4,10 @@ Module Brain - Cerveau central de NETY
 
 
 class Brain:
-    """Cerveau central qui coordonne tous les modules"""
+    """
+    Le cerveau principal de NETY
+    Orchestre tous les modules et gère l'interaction avec le système
+    """
     
     def __init__(self):
         """Initialise le Brain et ses modules"""

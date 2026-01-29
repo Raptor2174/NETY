@@ -79,10 +79,10 @@ class KnowledgeManager:
         
         # Insérer dans SQLite
         with DatabaseConnector.sqlite_cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO knowledge (title, content, category, source, tags, metadata)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (title, content, category, source, tags_str, metadata_str))
+            cursor.execute(
+                "INSERT INTO knowledge (title, content, category, source, tags, metadata) VALUES (?, ?, ?, ?, ?, ?)",
+                (title, content, category, source, tags_str, metadata_str))
+
             
             knowledge_id = cursor.lastrowid or 0
         
