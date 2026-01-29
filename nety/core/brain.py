@@ -71,22 +71,32 @@ class Brain:
             return f"Erreur de traitement: {str(e)}"
     
     def retrieve_context(self, message: str, intent: dict) -> dict:
-        """Récupère le contexte basé sur le message et l'intention"""
-        # Rechercher des connaissances pertinentes
+        """
+        Récupère le contexte basé sur le message et l'intention
+        """
+        
+        # 🆕 RECHERCHER DES CONNAISSANCES PERTINENTES
         knowledge_content = ""
         try:
-            # Essayer de rechercher des connaissances pertinentes
-            if self.knowledge and hasattr(self.knowledge, 'search'):
-                results = self.knowledge.search(message, limit=3)
-                knowledge_content = "\n".join([r.get('content', '') for r in results]) if results else ""
+            # Utiliser le SearchEngine pour trouver du contexte
+            from nety.knowledge_base import SearchEngine
+            search = SearchEngine()
+            results = search.search(message, limit=3, use_semantic=False)
+            
+            if results:
+                knowledge_content = "\n\n".join([
+                    f"[{r.get('title', 'Sans titre')}]\n{r.get('content', '')}" 
+                    for r in results
+                ])
         except Exception as e:
-            knowledge_content = f"Erreur lecture KB: {str(e)}"
+            print(f"⚠️ Erreur recherche KB: {e}")
+            knowledge_content = ""
         
         context = {
             "message": message,
             "intent": intent,
             "history": self.context_history[-5:] if self.context_history else [],
-            "knowledge": knowledge_content
+            "knowledge": knowledge_content  # ✅ AJOUT DE LA CLÉ !
         }
         return context
     
@@ -132,27 +142,41 @@ class Brain:
     
     def add_to_memory(self, input_data, output_data):
         """Ajoute une interaction à la mémoire"""
-        self.memory.append({
-            "input": input_data,
-            "output": output_data
-        })
-        # Limiter la mémoire à 100 entrées
-        if len(self.memory) > 100:
-            self.memory.pop(0)
+        summary = f"Input: {str(input_data)[:50]} | Output: {str(output_data)[:50]}"
+        self.memory.add_memory(summary)
     
     def get_memory(self):
         """Récupère la mémoire"""
         return self.memory
     
+    def clear(self):
+        """Vide le Brain (mémoire et contexte)"""
+        self.clear_memory()
+        self.context_history = []
+
+    def clear_all(self):
+        """Vide complètement le Brain"""
+        self.clear_memory()
+        self.context_history = []
+        # Réinitialiser KnowledgeManager en ré-instanciant l'objet
+        self.knowledge = KnowledgeManager()
+
+    def reset(self):
+        """Réinitialise le Brain"""
+        self.clear_memory()
+        self.context_history = []
+        self.state = "active"
+
     def clear_memory(self):
         """Vide la mémoire"""
-        self.memory = []
+        # Réinitialiser MemoryManager en ré-instanciant l'objet
+        self.memory = MemoryManager()
     
     def set_context(self, key, value):
         """Définit un élément de contexte"""
         self.context[key] = value
     
-    def get_context(self, key=None):
+    def get_context_value(self, key=None):
         """Récupère le contexte ou un élément"""
         if key is None:
             return self.context
