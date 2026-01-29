@@ -181,7 +181,7 @@ class KnowledgeManager:
                   new_tags, new_metadata, knowledge_id))
         
         # Mettre à jour l'embedding dans Chroma si le contenu a changé
-        if content and self.knowledge_collection:
+        if content is not None and self.knowledge_collection:
             try:
                 self.knowledge_collection.update(
                     documents=[new_content],
@@ -289,7 +289,8 @@ class KnowledgeManager:
             sql += " AND category = ?"
             params.append(category)
         
-        sql += f" ORDER BY created_at DESC LIMIT {limit}"
+        sql += " ORDER BY created_at DESC LIMIT ?"
+        params.append(limit)
         
         with DatabaseConnector.sqlite_cursor() as cursor:
             cursor.execute(sql, params)
@@ -394,7 +395,8 @@ class KnowledgeManager:
             sql += " WHERE session_id = ?"
             params.append(session_id)
         
-        sql += f" ORDER BY timestamp DESC LIMIT {limit}"
+        sql += " ORDER BY timestamp DESC LIMIT ?"
+        params.append(limit)
         
         with DatabaseConnector.sqlite_cursor() as cursor:
             cursor.execute(sql, params)

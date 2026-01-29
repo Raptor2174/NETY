@@ -14,9 +14,11 @@ except ImportError:
 
 try:
     import redis
+    from redis import ConnectionError as RedisConnectionError
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
+    RedisConnectionError = None
 
 from .database_config import DatabaseConfig
 
@@ -32,12 +34,16 @@ class DatabaseConnector:
     def get_sqlite_connection(cls) -> sqlite3.Connection:
         """
         Retourne une connexion SQLite (singleton)
+        
+        NOTE: check_same_thread=False est utilisé car NETY utilise un modèle
+        single-threaded pour le Brain. Pour une utilisation multi-thread,
+        utilisez un pool de connexions à la place.
         """
         if cls._sqlite_connection is None:
             db_path = DatabaseConfig.get_sqlite_path()
             cls._sqlite_connection = sqlite3.connect(
                 db_path,
-                check_same_thread=False
+                check_same_thread=False  # Safe pour le modèle single-thread de NETY
             )
             cls._sqlite_connection.row_factory = sqlite3.Row
             
@@ -104,7 +110,7 @@ class DatabaseConnector:
             # Test de connexion
             try:
                 cls._redis_client.ping()
-            except redis.ConnectionError:
+            except RedisConnectionError:
                 print("⚠️  Redis non disponible, fonctionnement sans cache")
                 cls._redis_client = None
                 
