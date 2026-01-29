@@ -2,7 +2,7 @@
 Script de test pour vérifier l'intégration Brain ↔ ML Engine
 """
 
-from ..nety.core.brain import Brain
+from nety.core.brain import Brain
 
 # Test 1 : Initialisation
 print("=" * 50)
