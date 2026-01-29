@@ -14,7 +14,13 @@ class SimpleTokenizer:
         self.next_idx = 2
     
     def fit(self, texts: List[str]):
-        """Construit le vocabulaire à partir d'une liste de textes"""
+        """
+        Construit le vocabulaire à partir d'une liste de textes
+        
+        Note: Seuls les premiers (vocab_size - 2) mots uniques seront ajoutés
+        au vocabulaire (indices 0 et 1 sont réservés pour <pad> et <unk>).
+        Les mots suivants seront traités comme des tokens inconnus.
+        """
         for text in texts:
             words = text.lower().split()
             for word in words:
@@ -24,7 +30,15 @@ class SimpleTokenizer:
                     self.next_idx += 1
     
     def encode(self, text: str, max_length: int = 20) -> torch.Tensor:
-        """Convertit un texte en tensor d'indices"""
+        """
+        Convertit un texte en tensor d'indices
+        
+        Note: Les textes vides retournent un tensor rempli de tokens <pad>
+        """
+        if not text or not text.strip():
+            # Handle empty text
+            return torch.tensor([0] * max_length, dtype=torch.long)
+        
         words = text.lower().split()
         indices = [self.word_to_idx.get(word, 1) for word in words]  # 1 = <unk>
         

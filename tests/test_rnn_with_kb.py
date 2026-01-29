@@ -64,8 +64,10 @@ class TestRNNWithKnowledgeBase:
         results = search.search(query="animal", category="animaux", limit=2, use_semantic=False)
         context = "\n\n".join([f"[{r['title']}]\n{r['content']}" for r in results]) if results else ""
         
+        assert len(results) == 2, f"Expected 2 results, got {len(results)}"
         assert len(context) > 0
-        assert "chat" in context.lower() or "chien" in context.lower()
+        # Verify both knowledge entries are in the context
+        assert "chat" in context.lower() and "chien" in context.lower()
         
         # 4. Préparer pour RNN
         tokenizer = SimpleTokenizer(vocab_size=1000)

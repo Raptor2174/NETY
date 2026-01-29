@@ -110,8 +110,11 @@ class NETYBrainWithRNN:
             keywords = keywords.replace(word, "")
         keywords = keywords.strip().strip("?").strip()
         
+        # If keywords is empty after extraction, use original question
+        search_term = keywords if keywords else question
+        
         # Use non-semantic search as fallback when Chroma is not available
-        results = self.search.search(keywords, limit=2, use_semantic=False)
+        results = self.search.search(search_term, limit=2, use_semantic=False)
         
         if results:
             context = "\n\n".join([f"[{r['title']}]\n{r['content']}" for r in results])
