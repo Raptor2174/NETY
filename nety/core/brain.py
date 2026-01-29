@@ -175,6 +175,7 @@ def get_context(self) -> list:
     Utilisé pour les tests et le debugging
     
     Returns:
+        List of interactions with {input, output} keys
         Liste des interactions {input, output}
     """
     return self.context_history.copy()

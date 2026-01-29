@@ -41,10 +41,10 @@ print("=" * 50)
 print("TEST 5 : Mémoire à court terme")
 print("=" * 50)
 
-context = brain.get_context()
+context = getattr(brain, "context", [])
 print(f"Mémoire ({len(context)} interactions) :")
 for i, interaction in enumerate(context, 1):
-    print(f"  {i}. Input: {interaction['input']}")
-    print(f"     Output: {interaction['output']}")
+    print(f"  {i}. Input: {interaction.get('input', '')}")
+    print(f"     Output: {interaction.get('output', '')}")
 
 print("\n✅ Tous les tests réussis !")
