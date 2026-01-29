@@ -52,5 +52,5 @@ class SimpleTokenizer:
     
     def decode(self, indices: torch.Tensor) -> str:
         """Convertit un tensor d'indices en texte"""
-        words = [self.idx_to_word.get(idx.item(), "<unk>") for idx in indices]
+        words = [self.idx_to_word.get(int(idx.item()), "<unk>") for idx in indices]
         return " ".join([w for w in words if w != "<pad>"])
