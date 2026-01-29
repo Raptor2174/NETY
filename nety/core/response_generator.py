@@ -1,76 +1,70 @@
-# nety/core/response_generator.py
 from typing import Optional
-from nety.cortex_limbic.limbic_filter import LimbicFilter
-from nety.knowledge_base.knowledge_manager import KnowledgeManager
-
-from transformers import pipeline, AutoModelForCausalLM, AutoTokenizer
+from transformers import pipeline
 
 class ResponseGenerator:
+    """Génère les réponses de NETY"""
+    
     def __init__(self):
-        # Charger un modèle léger en français
-        self.model_name = "bigscience/bloomz-560m"  # 560M paramètres, léger
-        self.generator = pipeline("text-generation", model=self.model_name)
+        # Charger le modèle une seule fois
+        self.generator = pipeline(
+            "text-generation", 
+            model="bigscience/bloomz-560m"
+        )
     
-    
-    
-    def generate(self, message: str, context: Optional[dict] = None, personality_filter: Optional[dict] = None) -> str:
-        """Generate a response based on message and context."""
+    def generate(self, message: str, context: Optional[dict] = None, 
+                 limbic_filter: Optional[dict] = None) -> str:
+        """Génère une réponse avec les contraintes limbiques"""
+        
         if context is None:
             context = {}
-        if personality_filter is None:
-            personality_filter = {'tone': 'neutral', 'behavior_rules': ''}
-        
-        # Safely access knowledge with a default value
-        knowledge = context.get('knowledge', '')
-        
-        # Use the knowledge variable in your prompt/logic
-        # Example:
-        prompt = f"""
-        Context knowledge: {knowledge}
-        User message: {message}
-        
-        Generate an appropriate response.
-        """
+        if limbic_filter is None:
+            limbic_filter = {'tone': 'friendly', 'behavior_rules': []}
         
         # Construire le prompt
-        system_prompt = self._build_prompt(personality_filter)
+        system_prompt = self._build_prompt(limbic_filter)
         
         # Enrichir avec le contexte
-        knowledge_text = context.get('knowledge', 'Aucune connaissance disponible')
-        full_prompt = f"""
-{system_prompt}
+        knowledge = context.get('knowledge', '')
+        full_prompt = f"""{system_prompt}
 
 CONNAISSANCES:
-{knowledge_text}
+{knowledge}
 
 MESSAGE: {message}
-"""
+RÉPONSE:"""
         
-        # Appel LLM (à implémenter)
+        # Appel LLM
         response = self._call_llm(full_prompt)
         
         return response
     
     def _build_prompt(self, limbic_filter: dict) -> str:
         """Construit le system prompt"""
-        return f"""
-Tu es NETY.
+        tone = limbic_filter.get('tone', 'friendly')
+        rules = limbic_filter.get('behavior_rules', [])
+        
+        return f"""Tu es NETY, une IA conversationnelle.
 
-TON: {limbic_filter['tone']}
-RÈGLES: {limbic_filter['behavior_rules']}
-"""
+TON: {tone}
+RÈGLES: {rules}"""
     
     def _call_llm(self, prompt: str) -> str:
         """Appelle le LLM"""
-        """Génère une vraie réponse avec un LLM"""
         try:
             result = self.generator(
                 prompt,
-                max_length=150,
-                num_return_sequences=1,
-                temperature=0.7
+                max_new_tokens=100,
+                temperature=0.7,
+                do_sample=True,
+                pad_token_id=getattr(getattr(self.generator, "tokenizer", None), "eos_token_id", None)
             )
-            return result[0]['generated_text']
+            
+            # Retirer le prompt de la réponse complète
+            full_text = result[0]['generated_text']
+            response = full_text[len(prompt):].strip()
+            
+            return response if response else "..."
+            
         except Exception as e:
-            return f"Erreur de génération: {str(e)}"
-        
+            print(f"❌ Erreur LLM: {e}")
+            return "Erreur de génération."
