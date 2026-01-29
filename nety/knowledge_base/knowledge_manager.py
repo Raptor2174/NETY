@@ -1,15 +1,18 @@
 # nety/knowledge_base/knowledge_manager.py
 
 
+from typing import Dict, Any
+
+
 class KnowledgeManager:
     """
     Gère la base de connaissances de NETY
     Recherche et récupère les informations pertinentes
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         # Base de connaissances simple (à étendre avec une vraie base de données)
-        self.knowledge_base = {
+        self.knowledge_base: Dict[str, Dict[str, str]] = {
             "identité": {
                 "nom": "NETY",
                 "type": "IA de traitement du langage naturel",
@@ -83,7 +86,7 @@ class KnowledgeManager:
         keywords = category_keywords.get(category, [])
         return any(keyword in query for keyword in keywords)
     
-    def add_knowledge(self, category: str, key: str, value: str):
+    def add_knowledge(self, category: str, key: str, value: str) -> None:
         """
         Ajoute une nouvelle connaissance à la base
         
@@ -94,11 +97,5 @@ class KnowledgeManager:
         """
         if category not in self.knowledge_base:
             self.knowledge_base[category] = {}
-        
-        # Vérifier que la catégorie est bien un dictionnaire
-        if not isinstance(self.knowledge_base[category], dict):
-            # Convertir en dictionnaire si ce n'est pas le cas
-            old_value = self.knowledge_base[category]
-            self.knowledge_base[category] = {"_default": old_value}
         
         self.knowledge_base[category][key] = value
