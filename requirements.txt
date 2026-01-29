@@ -23,6 +23,12 @@ pyttsx3>=2.90
 spacy>=3.7.0
 # Pour installer le modèle français: python -m spacy download fr_core_news_sm
 
+# Knowledge Base - Databases
+chromadb>=0.4.0                          # Vector database pour recherche sémantique
+sentence-transformers>=2.2.0             # Embeddings multilingues pour Chroma
+redis>=5.0.0                             # Cache haute performance (optionnel)
+hiredis>=2.0.0                           # Performance boost pour Redis (optionnel)
+
 # Development and Testing
 pytest>=7.4.3
 flake8>=6.1.0

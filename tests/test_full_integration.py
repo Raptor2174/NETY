@@ -61,12 +61,15 @@ for module, status in modules.items():
 # Vérifier le contexte du Brain
 print("\n5. Vérification du contexte du Brain...")
 if nety.brain:
-    context = nety.brain.get_context()
-    print(f"   ✅ Interactions enregistrées: {len(context)}")
-    if context:
-        last_interaction = context[-1]
-        print(f"      Input: {last_interaction['input'][:50]}...")
-        print(f"      Output: {last_interaction['output'][:50]}...")
+    context = getattr(nety.brain, "context", None)
+    if context is not None:
+        print(f"   ✅ Interactions enregistrées: {len(context)}")
+        if context:
+            last_interaction = context[-1]
+            print(f"      Input: {last_interaction['input'][:50]}...")
+            print(f"      Output: {last_interaction['output'][:50]}...")
+    else:
+        print("   ⚠️ Le Brain ne possède pas d'attribut 'context'")
 
 # Tester avec un autre type de message
 print("\n6. Test avec un message de type 'chat'...")
