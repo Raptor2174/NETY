@@ -42,20 +42,13 @@ class ResponseGenerator:
         self._load_model()
         print("✅ Modèle chargé avec succès!")
     
-    def _load_model(self):
+    def _load_model(self) -> None:
         """Charge le modèle et le tokenizer"""
         model_name = self.model_config['name']
         
-        # Configuration de quantization si activée
-        quantization_config = None
-        if self.config.USE_QUANTIZATION and self.model_type == "mistral":
-            print(f"⚙️ Quantization {self.config.QUANTIZATION_BITS}-bit activée")
-            quantization_config = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_compute_dtype=torch.float16,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4"
-            )
+        # ✅ Détection GPU
+        has_gpu = torch.cuda.is_available()
+        print(f"🖥️ GPU détecté: {'Oui' if has_gpu else 'Non'}")
         
         # Charger le tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(
@@ -67,30 +60,64 @@ class ResponseGenerator:
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         
-        # ✅ Charger le modèle selon le type
-        if self.model_type == "mistral" and quantization_config:
-            print("📦 Chargement de Mistral avec quantization 4-bit...")
-            self.model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                quantization_config=quantization_config,
-                device_map="auto",
-                trust_remote_code=True,
-                torch_dtype=torch.float16
-            )
+        # Charger le modèle selon le type
+        if self.model_type == "mistral":
+            print("📦 Chargement de Mistral-7B...")
+            
+            if has_gpu and self.config.USE_QUANTIZATION:
+                # ✅ Quantization 4-bit sur GPU
+                print(f"⚙️ Quantization {self.config.QUANTIZATION_BITS}-bit activée (GPU)")
+                quantization_config = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=torch.float16,
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_quant_type="nf4"
+                )
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                    quantization_config=quantization_config,
+                    device_map="auto",
+                    trust_remote_code=True,
+                    torch_dtype=torch.float16
+                )
+            
+            elif not has_gpu and self.config.USE_QUANTIZATION:
+                # ✅ Quantization 8-bit sur CPU (alternative)
+                print("⚙️ Quantization 8-bit activée (CPU)")
+                quantization_config = BitsAndBytesConfig(
+                    load_in_8bit=True,
+                    llm_int8_enable_fp32_cpu_offload=True
+                )
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                    quantization_config=quantization_config,
+                    device_map="auto",
+                    trust_remote_code=True,
+                    low_cpu_mem_usage=True
+                )
+            
+            else:
+                # ✅ Chargement standard sans quantization (CPU)
+                print("📦 Chargement standard sur CPU (pas de quantization)")
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                    device_map="cpu",
+                    trust_remote_code=True,
+                    low_cpu_mem_usage=True,
+                    torch_dtype=torch.float32
+                )
             
         elif self.model_type == "bloomz":
             print("📦 Chargement de BLOOMZ via pipeline...")
-            # Ancien comportement pour BLOOMZ
             self.pipeline = pipeline(
                 "text-generation",
                 model=model_name,
-                device=-1  # CPU
+                device=-1
             )
             self.model = self.pipeline.model
-            
+        
         else:
             print("📦 Chargement standard (CPU)...")
-            # Chargement standard (CPU)
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 device_map="auto",

@@ -26,9 +26,8 @@ class Brain:
         self.response_generator = ResponseGenerator(model_type="mistral")
         
         # Afficher les infos
-        model_info = self.response_generator.get_model_info()
-        print(f"✅ Modèle chargé: {model_info['model_name']}")
-        print(f"📊 Contexte max: {model_info['context_length']} tokens")
+        print(f"✅ Modèle chargé: Mistral-7B")
+        print(f"📊 Contexte max: 8192 tokens")
         
         # Historique des interactions pour get_context()
         self.context_history = []
