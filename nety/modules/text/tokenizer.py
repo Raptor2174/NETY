@@ -78,3 +78,14 @@ class SimpleTokenizer:
         self.idx_to_word = {int(k): v for k, v in vocab_data["idx_to_word"].items()}
         self.vocab_size = vocab_data["vocab_size"]
         self.next_idx = vocab_data["next_idx"]
+
+    def get_stats(self) -> dict:
+        """
+        Retourne des statistiques sur le vocabulaire
+        """
+        return {
+            "vocab_size": len(self.word_to_idx),
+            "max_vocab_size": self.vocab_size,
+            "unique_words": self.next_idx - 2,  # Exclut <pad> et <unk>
+            "special_tokens": ["<pad>", "<unk>"]
+        }
