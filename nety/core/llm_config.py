@@ -24,7 +24,7 @@ class LLMConfig:
         "mistral": {
             "name": "mistralai/Mistral-7B-Instruct-v0.2",
             "type": "mistral",
-            "requires_gpu": False,  # Fonctionne en CPU avec quantization
+            "requires_gpu": True,  # Fonctionne en CPU avec quantization
             "min_ram_gb": 8,
             "context_length": 32768
         }
