@@ -5,9 +5,9 @@ from transformers import (
     AutoModelForCausalLM, 
     AutoTokenizer,
     BitsAndBytesConfig,
-    GenerationConfig
+    pipeline  # ✅ AJOUT de l'import
 )
-from transformers.pipelines import Pipeline
+from transformers.pipelines.base import Pipeline
 from transformers.modeling_utils import PreTrainedModel
 from .llm_config import LLMConfig
 import re
@@ -24,9 +24,16 @@ class ResponseGenerator:
         Args:
             model_type: "mistral" ou "bloomz" (défaut: depuis config)
         """
+        from .llm_config import LLMConfig  # Import local pour éviter circular import
+        
         self.config = LLMConfig()
         self.model_type = model_type or self.config.CURRENT_MODEL
         self.model_config = self.config.MODELS[self.model_type]
+        
+        # ✅ Initialiser les attributs AVANT de charger
+        self.model = None
+        self.pipeline = None
+        self.tokenizer = None
         
         print(f"🤖 Chargement du modèle {self.model_config['name']}...")
         print(f"📍 Device: {self.config.get_device()}")
@@ -60,8 +67,9 @@ class ResponseGenerator:
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
         
-        # Charger le modèle
+        # ✅ Charger le modèle selon le type
         if self.model_type == "mistral" and quantization_config:
+            print("📦 Chargement de Mistral avec quantization 4-bit...")
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name,
                 quantization_config=quantization_config,
@@ -69,15 +77,19 @@ class ResponseGenerator:
                 trust_remote_code=True,
                 torch_dtype=torch.float16
             )
+            
         elif self.model_type == "bloomz":
+            print("📦 Chargement de BLOOMZ via pipeline...")
             # Ancien comportement pour BLOOMZ
             self.pipeline = pipeline(
                 "text-generation",
                 model=model_name,
                 device=-1  # CPU
             )
-            self.model = self.pipeline.model if hasattr(self.pipeline, 'model') else None
+            self.model = self.pipeline.model
+            
         else:
+            print("📦 Chargement standard (CPU)...")
             # Chargement standard (CPU)
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name,
@@ -236,28 +248,40 @@ NETY:"""
             else:
                 if self.model is None:
                     raise RuntimeError("Modèle Mistral non chargé.")
-                # Nouvelle méthode pour Mistral
+                if self.tokenizer is None:
+                    raise RuntimeError("Tokenizer non chargé.")
+                    
+                # Tokenizer le prompt
                 inputs = self.tokenizer(
                     prompt, 
                     return_tensors="pt",
                     truncation=True,
                     max_length=4096
-                ).to(self.model.device)
+                )
+                # Déplacer les tensors sur le bon device
+                for k, v in inputs.items():
+                    inputs[k] = v.to(self.model.device)
                 
                 # Configuration de génération
                 gen_config = self.config.MISTRAL_GENERATION_CONFIG.copy()
                 
                 # Générer
                 with torch.no_grad():
-                    outputs = self.model.generate(
-                        **inputs,
-                        max_new_tokens=gen_config.get('max_new_tokens', 256),
-                        temperature=gen_config.get('temperature', 1.0),  # Fixed typo here
-                        top_p=gen_config.get('top_p', 0.9),
-                        do_sample=gen_config.get('do_sample', True),
-                        pad_token_id=self.tokenizer.pad_token_id,
-                        eos_token_id=self.tokenizer.eos_token_id
-                    )
+                    if hasattr(self.model, 'generate'):
+                        outputs = self.model.generate(
+                            input_ids=inputs["input_ids"],
+                            attention_mask=inputs.get("attention_mask"),
+                            max_new_tokens=gen_config.get('max_new_tokens', 200),
+                            temperature=gen_config.get('temperature', 0.7),
+                            top_p=gen_config.get('top_p', 0.95),
+                            top_k=gen_config.get('top_k', 50),
+                            repetition_penalty=gen_config.get('repetition_penalty', 1.1),
+                            do_sample=gen_config.get('do_sample', True),
+                            pad_token_id=self.tokenizer.pad_token_id,
+                            eos_token_id=self.tokenizer.eos_token_id
+                        )
+                    else:
+                        raise RuntimeError("Le modèle n'a pas de méthode 'generate'.")
                 
                 # Décoder
                 full_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
@@ -283,7 +307,6 @@ NETY:"""
         """Nettoie la réponse générée"""
         # Retirer caractères étranges
         response = response.replace('=', '')
-        response = response.replace('...', '.')
         
         # Limiter à la première phrase complète si trop long
         if len(response) > 500:
@@ -332,7 +355,7 @@ NETY:"""
         """Retourne les infos du modèle actuel"""
         device = "unknown"
         try:
-            if hasattr(self.model, 'device'):
+            if self.model is not None and hasattr(self.model, 'device'):
                 device = str(self.model.device)
             elif self.model is not None:
                 device = "cpu"
@@ -344,6 +367,6 @@ NETY:"""
             "type": self.model_type,
             "context_length": self.model_config['context_length'],
             "device": device,
-            "quantized": self.config.USE_QUANTIZATION,
+            "quantized": self.config.USE_QUANTIZATION if self.model_type == "mistral" else False,
             "ram_required_gb": self.model_config['min_ram_gb']
         }
