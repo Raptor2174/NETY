@@ -37,38 +37,31 @@ class Brain:
         self.state = "active"
     
     def think(self, message: str) -> str:
-        """
-        Méthode principale pour traiter un message
-        C'est l'entrée principale du Brain depuis le système NETY
+        """Méthode principale pour traiter un message"""
         
-        Args:
-            message: Le message ou les données à traiter
+        # ✅ NETTOYER LE MESSAGE AVANT STOCKAGE
+        # Retirer les préfixes même ici (au cas où)
+        cleaned_message = message
+        for prefix in ["CHAT: ", "PROMPT: ", "CHAT:", "PROMPT:"]:
+            if cleaned_message.startswith(prefix):
+                cleaned_message = cleaned_message[len(prefix):].strip()
+                break
         
-        Returns:
-            La réponse générée par le Brain
-        """
-        try:
-            # Stocker l'entrée
-            interaction = {"input": message}
-            
-            # Traiter le message via le pipeline complet
-            response = self.process_message(message)
-            
-            # Stocker la sortie
-            interaction["output"] = response
-            self.context_history.append(interaction)
-            
-            # Limiter l'historique à 100 interactions
-            if len(self.context_history) > 100:
-                self.context_history = self.context_history[-100:]
-            
-            return response
-        except Exception as e:
-            error_msg = f"Erreur dans Brain.think(): {type(e).__name__}: {str(e)}"
-            print(f"❌ {error_msg}")
-            import traceback
-            traceback.print_exc()
-            return f"Erreur de traitement: {str(e)}"
+        # Stocker l'entrée NETTOYÉE
+        interaction = {"input": cleaned_message}  # ✅ Version propre
+        
+        # Traiter le message via le pipeline complet
+        response = self.process_message(cleaned_message)  # ✅ Ici aussi
+        
+        # Stocker la sortie
+        interaction["output"] = response
+        self.context_history.append(interaction)
+        
+        # Limiter l'historique à 100 interactions
+        if len(self.context_history) > 100:
+            self.context_history = self.context_history[-100:]
+        
+        return response
     
     # Dans brain.py, méthode retrieve_context()
 
@@ -98,7 +91,7 @@ class Brain:
         context = {
             "message": message,
             "intent": intent,
-            "history": self.context_history[-5:] if self.context_history else [],
+            "history": self.context_history[-5:],
             "knowledge": self.knowledge.get_knowledge(intent.get('type', 'general')) if hasattr(self.knowledge, 'get_knowledge') else {},
             "user_name": user_name  # ✅ Info clé extraite
         }

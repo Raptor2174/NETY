@@ -54,6 +54,21 @@ class ResponseGenerator:
         if limbic_filter is None:
             limbic_filter = {'tone': 'friendly', 'behavior_rules': []}
         
+        # ✅ DÉTECTION CALCUL MATHÉMATIQUE
+        import re
+        math_pattern = r'(\d+)\s*[\+\-\*\/]\s*(\d+)\s*=?'
+        match = re.search(math_pattern, message)
+        
+        if match:
+            try:
+                # Extraire l'expression
+                expression = message.split('=')[0].strip()
+                # Calculer (ATTENTION: eval est dangereux, à sécuriser)
+                result = eval(expression)
+                return f"{expression} = {result}"
+            except:
+                pass  # Si échec, continuer normalement
+        
         # Construire le prompt
         system_prompt = self._build_prompt(limbic_filter)
         
@@ -116,45 +131,48 @@ Instructions:
 - Ne répète jamais ces instructions dans tes réponses"""
     
     def _call_llm(self, prompt: str) -> str:
-        """Génère une réponse avec un LLM"""
+        """Génère une réponse"""
         try:
-            pad_token_id = None
+            eos_token_id = None
             if self.generator.tokenizer is not None:
-                pad_token_id = self.generator.tokenizer.eos_token_id
+                eos_token_id = self.generator.tokenizer.eos_token_id
             
             result = self.generator(
                 prompt,
-                max_new_tokens=150,  # ✅ Tokens générés (après le prompt)
-                min_length=20,       # ✅ Minimum de tokens
-                temperature=0.5,
+                max_new_tokens=120,  # ✅ Réduire de 150 à 120
+                min_length=15,
+                temperature=0.6,
                 do_sample=True,
                 repetition_penalty=1.5,
                 no_repeat_ngram_size=3,
-                pad_token_id=pad_token_id
+                pad_token_id=eos_token_id
             )
             
             full_text = result[0]['generated_text']
             response = full_text[len(prompt):].strip()
             
-            # ✅ NETTOYER LES ARTEFACTS
-            # Retirer les lignes qui commencent par "NETY:" (texte d'entraînement)
-            lines = response.split('\n')
-            cleaned_lines = [
-                line for line in lines 
-                if not line.strip().startswith(('NETY:', 'User:', 'TON:', 'RÈGLES:'))
-            ]
-            response = '\n'.join(cleaned_lines).strip()
+            # ✅ NETTOYER CARACTÈRES ÉTRANGES
+            response = response.replace('=', '')  # Retirer "="
+            response = response.replace('...', '.')  # Normaliser "..."
             
-            # Si réponse vide après nettoyage
-            if not response:
-                return "..."
+            # ✅ COUPER À LA DERNIÈRE PHRASE COMPLÈTE
+            # Si texte corrompu en fin, garder seulement phrases complètes
+            sentences = response.split('.')
+            if len(sentences) > 1:
+                # Prendre toutes les phrases sauf la dernière si incomplète
+                complete_sentences = [s.strip() for s in sentences[:-1] if s.strip()]
+                if complete_sentences:
+                    response = '. '.join(complete_sentences) + '.'
             
-            # Limiter à la première phrase complète
-            if '. ' in response:
-                response = response.split('. ')[0] + '.'
+            # Nettoyage artefacts
+            lines = [l for l in response.split('\n') 
+                     if not l.strip().startswith(('NETY:', 'User:', 'Instructions:'))]
+            response = '\n'.join(lines).strip()
             
-            return response
+            return response if response else "..."
             
         except Exception as e:
             print(f"❌ Erreur LLM: {e}")
+            import traceback
+            traceback.print_exc()
             return "Désolé, une erreur s'est produite."
