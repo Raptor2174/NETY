@@ -97,9 +97,6 @@ class ResponseGenerator:
                 trust_remote_code=True,
                 low_cpu_mem_usage=True
             )
-        self.model: Optional[PreTrainedModel] = None
-        self.pipeline: Optional[Pipeline] = None
-    
     def generate(self, message: str, context: Optional[Dict] = None, 
                  limbic_filter: Optional[Dict] = None) -> str:
         """Génère une réponse avec les contraintes limbiques"""
@@ -246,10 +243,15 @@ NETY:"""
                 response = full_text[len(prompt):].strip()
             
             else:
+                # Nouvelle méthode pour Mistral
                 if self.model is None:
                     raise RuntimeError("Modèle Mistral non chargé.")
                 if self.tokenizer is None:
                     raise RuntimeError("Tokenizer non chargé.")
+                
+                # ✅ Vérification explicite pour le type checker
+                if not hasattr(self.model, 'generate'):
+                    raise RuntimeError("Le modèle n'a pas de méthode 'generate'.")
                     
                 # Tokenizer le prompt
                 inputs = self.tokenizer(
@@ -258,30 +260,28 @@ NETY:"""
                     truncation=True,
                     max_length=4096
                 )
-                # Déplacer les tensors sur le bon device
-                for k, v in inputs.items():
-                    inputs[k] = v.to(self.model.device)
+                
+                # ✅ Déplacer sur le bon device
+                if hasattr(self.model, 'device'):
+                    inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
                 
                 # Configuration de génération
                 gen_config = self.config.MISTRAL_GENERATION_CONFIG.copy()
                 
-                # Générer
+                # ✅ Générer avec type assertion
                 with torch.no_grad():
-                    if hasattr(self.model, 'generate'):
-                        outputs = self.model.generate(
-                            input_ids=inputs["input_ids"],
-                            attention_mask=inputs.get("attention_mask"),
-                            max_new_tokens=gen_config.get('max_new_tokens', 200),
-                            temperature=gen_config.get('temperature', 0.7),
-                            top_p=gen_config.get('top_p', 0.95),
-                            top_k=gen_config.get('top_k', 50),
-                            repetition_penalty=gen_config.get('repetition_penalty', 1.1),
-                            do_sample=gen_config.get('do_sample', True),
-                            pad_token_id=self.tokenizer.pad_token_id,
-                            eos_token_id=self.tokenizer.eos_token_id
-                        )
-                    else:
-                        raise RuntimeError("Le modèle n'a pas de méthode 'generate'.")
+                    outputs = self.model.generate(  # type: ignore[attr-defined]
+                        input_ids=inputs["input_ids"],
+                        attention_mask=inputs.get("attention_mask"),
+                        max_new_tokens=gen_config.get('max_new_tokens', 200),
+                        temperature=gen_config.get('temperature', 0.7),
+                        top_p=gen_config.get('top_p', 0.95),
+                        top_k=gen_config.get('top_k', 50),
+                        repetition_penalty=gen_config.get('repetition_penalty', 1.1),
+                        do_sample=gen_config.get('do_sample', True),
+                        pad_token_id=self.tokenizer.pad_token_id,
+                        eos_token_id=self.tokenizer.eos_token_id
+                    )
                 
                 # Décoder
                 full_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
@@ -301,7 +301,7 @@ NETY:"""
             print(f"❌ Erreur LLM: {e}")
             import traceback
             traceback.print_exc()
-            return "Désolé, une erreur s'est produite lors de la génération de la réponse."
+        return "Désolé, une erreur s'est produite lors de la génération de la réponse."
     
     def _clean_response(self, response: str) -> str:
         """Nettoie la réponse générée"""
