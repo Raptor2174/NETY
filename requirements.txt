@@ -38,3 +38,11 @@ jupyter>=1.0.0
 
 # Utilities
 numpy>=1.26.0
+
+
+# Existing dependencies...
+
+# Knowledge Base - External Sources
+wikipediaapi>=0.6.0                      # Wikipedia loader
+SPARQLWrapper>=2.0.0                     # Wikidata SPARQL queries
+requests>=2.31.0                         # ConceptNet API calls

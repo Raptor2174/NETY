@@ -4,6 +4,8 @@ Tests pour la base de connaissances NETY
 import pytest
 import os
 import tempfile
+import time
+import gc
 from pathlib import Path
 
 from nety.knowledge_base import (
@@ -18,7 +20,7 @@ from nety.knowledge_base import (
 @pytest.fixture
 def temp_db_dir():
     """Crée un répertoire temporaire pour les tests"""
-    with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmpdir:
         # Override database paths for testing
         original_db_dir = DatabaseConfig.DB_DIR
         original_sqlite_path = DatabaseConfig.SQLITE_DB_PATH
@@ -35,13 +37,22 @@ def temp_db_dir():
         DatabaseConfig.SQLITE_DB_PATH = original_sqlite_path
         DatabaseConfig.CHROMA_PERSIST_DIR = original_chroma_dir
         
-        # Close all connections
+        # Close all connections FIRST
         DatabaseConnector.close_all()
+        
+        # Force garbage collection to release file handles
+        gc.collect()
+        time.sleep(0.2)  # Small delay to ensure files are released on Windows
 
 
 @pytest.fixture
 def knowledge_manager(temp_db_dir):
     """Crée un KnowledgeManager pour les tests"""
+    # Reset singletons before initializing
+    DatabaseConnector._sqlite_connection = None
+    DatabaseConnector._chroma_client = None
+    DatabaseConnector._redis_client = None
+    
     DatabaseInitializer.initialize_sqlite()
     # Chroma may not be available in test environment, that's ok
     try:
@@ -49,7 +60,14 @@ def knowledge_manager(temp_db_dir):
     except Exception:
         pass
     
-    return KnowledgeManager()
+    manager = KnowledgeManager()
+    
+    yield manager
+    
+    # Clean up after test
+    DatabaseConnector.close_all()
+    gc.collect()
+    time.sleep(0.1)
 
 
 class TestDatabaseConfig:

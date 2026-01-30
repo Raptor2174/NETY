@@ -110,7 +110,7 @@ class DatabaseConnector:
             # Test de connexion
             try:
                 cls._redis_client.ping()
-            except RedisConnectionError:
+            except Exception:
                 print("⚠️  Redis non disponible, fonctionnement sans cache")
                 cls._redis_client = None
                 
@@ -124,8 +124,11 @@ class DatabaseConnector:
             cls._sqlite_connection = None
             
         if cls._redis_client:
-            cls._redis_client.close()
+            try:
+                cls._redis_client.close()
+            except Exception:
+                pass
             cls._redis_client = None
             
-        # Chroma DB se ferme automatiquement
+        # Chroma DB se ferme via garbage collection
         cls._chroma_client = None

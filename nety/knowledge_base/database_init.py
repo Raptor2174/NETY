@@ -1,7 +1,12 @@
 """
 Schémas et initialisation des bases de données
 """
+from typing import TYPE_CHECKING, Optional
 from .database_connector import DatabaseConnector
+
+
+if TYPE_CHECKING:
+    import chromadb
 
 
 class DatabaseSchema:
@@ -119,13 +124,13 @@ class DatabaseInitializer:
         # Créer ou récupérer les collections
         try:
             # Collection pour les connaissances
-            client.get_or_create_collection(
+            knowledge_collection = client.get_or_create_collection(
                 name=DatabaseConfig.CHROMA_COLLECTION_KNOWLEDGE,
                 metadata={"description": "NETY knowledge base embeddings"}
             )
             
             # Collection pour les conversations
-            client.get_or_create_collection(
+            conversations_collection = client.get_or_create_collection(
                 name=DatabaseConfig.CHROMA_COLLECTION_CONVERSATIONS,
                 metadata={"description": "Conversation history embeddings"}
             )
@@ -138,6 +143,13 @@ class DatabaseInitializer:
     @staticmethod
     def initialize_redis():
         """Initialise Redis (vérification de connexion)"""
+        from typing import Any
+        try:
+            import redis
+            RedisType = redis.Redis
+        except ImportError:
+            RedisType = Any  # Fallback if redis is not installed
+
         client = DatabaseConnector.get_redis_client()
         
         if client is None:
@@ -148,11 +160,16 @@ class DatabaseInitializer:
         
         try:
             # Test de connexion
-            client.ping()
+            if hasattr(client, 'ping'):
+                response = client.ping()
+                if response:
+                    print("📌 Redis connexion vérifiée")
             
             # Initialiser quelques clés de configuration
-            if not client.exists("nety:version"):
+            version_exists = client.exists("nety:version")
+            if not version_exists:
                 client.set("nety:version", "1.0.0")
+                print("📌 Version Redis configurée: 1.0.0")
             
             print("✅ Redis initialisé")
             
