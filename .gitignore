@@ -82,3 +82,6 @@ tmp/
 # NETY temporary communication files
 tmp_to_nety.txt
 tmp_from_dashboard.txt
+
+# les modeles téléchargés
+models/
