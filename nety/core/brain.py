@@ -70,33 +70,37 @@ class Brain:
             traceback.print_exc()
             return f"Erreur de traitement: {str(e)}"
     
+    # Dans brain.py, méthode retrieve_context()
+
     def retrieve_context(self, message: str, intent: dict) -> dict:
-        """
-        Récupère le contexte basé sur le message et l'intention
-        """
+        """Récupère le contexte basé sur le message et l'intention"""
         
-        # 🆕 RECHERCHER DES CONNAISSANCES PERTINENTES
-        knowledge_content = ""
-        try:
-            # Utiliser le SearchEngine pour trouver du contexte
-            from nety.knowledge_base import SearchEngine
-            search = SearchEngine()
-            results = search.search(message, limit=3, use_semantic=False)
-            
-            if results:
-                knowledge_content = "\n\n".join([
-                    f"[{r.get('title', 'Sans titre')}]\n{r.get('content', '')}" 
-                    for r in results
-                ])
-        except Exception as e:
-            print(f"⚠️ Erreur recherche KB: {e}")
-            knowledge_content = ""
+        # ... code existant pour knowledge ...
+        
+        # ✅ EXTRAIRE LES INFORMATIONS CLÉS DE L'HISTORIQUE
+        user_name = None
+        for interaction in reversed(self.context_history[-10:]):
+            user_msg = interaction.get('input', '').lower()
+            # Détecter "je m'appelle X" ou "je suis X"
+            if "je m'appel" in user_msg or "je suis" in user_msg:
+                # Extraire le nom (simpliste)
+                words = user_msg.split()
+                try:
+                    if "m'appel" in user_msg:
+                        idx = words.index("m'appel") if "m'appel" in words else words.index("m'appelle")
+                        user_name = words[idx + 1].strip('.,!?')
+                    elif "je suis" in user_msg:
+                        idx = words.index("suis")
+                        user_name = words[idx + 1].strip('.,!?')
+                except:
+                    pass
         
         context = {
             "message": message,
             "intent": intent,
             "history": self.context_history[-5:] if self.context_history else [],
-            "knowledge": knowledge_content  # ✅ AJOUT DE LA CLÉ !
+            "knowledge": self.knowledge.get_knowledge(intent.get('type', 'general')) if hasattr(self.knowledge, 'get_knowledge') else {},
+            "user_name": user_name  # ✅ Info clé extraite
         }
         return context
     
