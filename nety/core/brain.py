@@ -4,6 +4,7 @@ Module Brain - Cerveau central de NETY
 # nety/core/brain.py
 from nety.cortex_limbic.limbic_filter import LimbicFilter
 from nety.cortex_limbic.memory_manager import MemoryManager
+from nety.cortex_limbic.emotion_engine import EmotionEngine
 from nety.knowledge_base.knowledge_manager import KnowledgeManager
 from nety.core.intent_analyzer import IntentAnalyzer
 from nety.core.response_generator import ResponseGenerator
@@ -19,6 +20,7 @@ class Brain:
         self.knowledge = KnowledgeManager()
         self.intent_analyzer = IntentAnalyzer()
         self.response_generator = ResponseGenerator()
+        self.emotion_engine = EmotionEngine()
         
         # Historique des interactions pour get_context()
         self.context_history = []
@@ -63,12 +65,13 @@ class Brain:
         
         return response
     
-    # Dans brain.py, méthode retrieve_context()
-
     def retrieve_context(self, message: str, intent: dict) -> dict:
         """Récupère le contexte basé sur le message et l'intention"""
         
-        # ... code existant pour knowledge ...
+        # Récupérer les connaissances pertinentes
+        knowledge_data = {}
+        if hasattr(self.knowledge, 'get_knowledge'):
+            knowledge_data = self.knowledge.get_knowledge(intent.get('type', 'general'))
         
         # ✅ EXTRAIRE LES INFORMATIONS CLÉS DE L'HISTORIQUE
         user_name = None
@@ -92,7 +95,7 @@ class Brain:
             "message": message,
             "intent": intent,
             "history": self.context_history[-5:],
-            "knowledge": self.knowledge.get_knowledge(intent.get('type', 'general')) if hasattr(self.knowledge, 'get_knowledge') else {},
+            "knowledge": knowledge_data,
             "user_name": user_name  # ✅ Info clé extraite
         }
         return context
@@ -106,17 +109,45 @@ class Brain:
         # [2] Récupération contextuelle
         context = self.retrieve_context(message, intent)
         
-        # [3] Filtrage par cortex limbique
+        # [3] Filtrage limbique avancé ✨
         personality_filter = self.limbic_filter.apply_filter(context)
         
         # [4] Génération de réponse
         response = self.response_generator.generate(
-            message, 
-            context, 
-            personality_filter
+            message, context, personality_filter
         )
         
+        # [5] Enregistrement de l'interaction pour apprentissage ✨
+        user_sentiment = self._analyze_user_sentiment(message)
+        interaction_data = {
+            "message": message,
+            "response": response,
+            "user_id": context.get("user_id"),
+            "emotional_state": personality_filter.get("emotional_state"),
+            "user_sentiment": user_sentiment
+        }
+        # Store interaction in memory instead
+        self.memory.add_memory(f"Interaction: {message[:50]} -> {response[:50]}")
+        
         return response
+    
+    def _analyze_user_sentiment(self, message: str) -> str:
+        """Analyse le sentiment de l'utilisateur à partir du message"""
+        positive_words = ["merci", "super", "génial", "content", "heureux", "aime", "formidable", "excellent"]
+        negative_words = ["triste", "nul", "mauvais", "déçu", "horrible", "déteste", "frustré"]
+        
+        message_lower = message.lower()
+        
+        # Compter les mots positifs et négatifs
+        positive_count = sum(1 for word in positive_words if word in message_lower)
+        negative_count = sum(1 for word in negative_words if word in message_lower)
+        
+        if positive_count > negative_count:
+            return "positif"
+        elif negative_count > positive_count:
+            return "négatif"
+        else:
+            return "neutre"
     
     def get_modules_status(self):
         """Retourne l'état de tous les modules"""

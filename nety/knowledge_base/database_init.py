@@ -1,12 +1,7 @@
 """
 Schémas et initialisation des bases de données
 """
-from typing import TYPE_CHECKING, Optional
 from .database_connector import DatabaseConnector
-
-
-if TYPE_CHECKING:
-    import chromadb
 
 
 class DatabaseSchema:
@@ -89,24 +84,30 @@ class DatabaseInitializer:
         """Initialise la base SQLite avec les schémas"""
         print("📊 Initialisation de la base SQLite...")
         
-        with DatabaseConnector.sqlite_cursor() as cursor:
-            # Créer les tables
-            cursor.execute(DatabaseSchema.KNOWLEDGE_TABLE)
-            cursor.execute(DatabaseSchema.CONVERSATIONS_TABLE)
-            cursor.execute(DatabaseSchema.CONFIG_TABLE)
-            cursor.execute(DatabaseSchema.LOGS_TABLE)
-            
-            # Créer les indexes
-            for index_sql in DatabaseSchema.KNOWLEDGE_INDEXES:
-                cursor.execute(index_sql)
-            
-            for index_sql in DatabaseSchema.CONVERSATIONS_INDEXES:
-                cursor.execute(index_sql)
+        try:
+            with DatabaseConnector.sqlite_cursor() as cursor:
+                # Créer les tables
+                cursor.execute(DatabaseSchema.KNOWLEDGE_TABLE)
+                cursor.execute(DatabaseSchema.CONVERSATIONS_TABLE)
+                cursor.execute(DatabaseSchema.CONFIG_TABLE)
+                cursor.execute(DatabaseSchema.LOGS_TABLE)
                 
-            for index_sql in DatabaseSchema.LOGS_INDEXES:
-                cursor.execute(index_sql)
-        
-        print("✅ Base SQLite initialisée")
+                # Créer les indexes
+                for index_sql in DatabaseSchema.KNOWLEDGE_INDEXES:
+                    cursor.execute(index_sql)
+                
+                for index_sql in DatabaseSchema.CONVERSATIONS_INDEXES:
+                    cursor.execute(index_sql)
+                    
+                for index_sql in DatabaseSchema.LOGS_INDEXES:
+                    cursor.execute(index_sql)
+            
+            print("✅ Base SQLite initialisée")
+            
+        except Exception as e:
+            print(f"❌ Erreur lors de l'initialisation de SQLite: {e}")
+            import traceback
+            traceback.print_exc()
     
     @staticmethod
     def initialize_chroma():
@@ -119,37 +120,58 @@ class DatabaseInitializer:
         
         print("📊 Initialisation de Chroma DB...")
         
-        from .database_config import DatabaseConfig
-        
-        # Créer ou récupérer les collections
         try:
-            # Collection pour les connaissances
-            knowledge_collection = client.get_or_create_collection(
-                name=DatabaseConfig.CHROMA_COLLECTION_KNOWLEDGE,
-                metadata={"description": "NETY knowledge base embeddings"}
-            )
-            
-            # Collection pour les conversations
-            conversations_collection = client.get_or_create_collection(
-                name=DatabaseConfig.CHROMA_COLLECTION_CONVERSATIONS,
-                metadata={"description": "Conversation history embeddings"}
-            )
-            
+            from .database_config import DatabaseConfig
+
+            # Vérifier que le client a la méthode attendue
+            if hasattr(client, "get_or_create_collection"):
+                # Créer ou récupérer les collections (méthode moderne)
+                knowledge_collection = client.get_or_create_collection(
+                    name=DatabaseConfig.CHROMA_COLLECTION_KNOWLEDGE,
+                    metadata={"description": "NETY knowledge base embeddings"}
+                )
+                print(f"  ✓ Collection '{DatabaseConfig.CHROMA_COLLECTION_KNOWLEDGE}' créée/récupérée")
+                
+                conversations_collection = client.get_or_create_collection(
+                    name=DatabaseConfig.CHROMA_COLLECTION_CONVERSATIONS,
+                    metadata={"description": "Conversation history embeddings"}
+                )
+                print(f"  ✓ Collection '{DatabaseConfig.CHROMA_COLLECTION_CONVERSATIONS}' créée/récupérée")
+            elif hasattr(client, "create_collection") and hasattr(client, "get_collection"):
+                # Pour les anciennes versions de chromadb
+                try:
+                    knowledge_collection = client.get_collection(DatabaseConfig.CHROMA_COLLECTION_KNOWLEDGE)
+                    print(f"  ✓ Collection '{DatabaseConfig.CHROMA_COLLECTION_KNOWLEDGE}' récupérée")
+                except Exception:
+                    knowledge_collection = client.create_collection(
+                        name=DatabaseConfig.CHROMA_COLLECTION_KNOWLEDGE,
+                        metadata={"description": "NETY knowledge base embeddings"}
+                    )
+                    print(f"  ✓ Collection '{DatabaseConfig.CHROMA_COLLECTION_KNOWLEDGE}' créée")
+                try:
+                    conversations_collection = client.get_collection(DatabaseConfig.CHROMA_COLLECTION_CONVERSATIONS)
+                    print(f"  ✓ Collection '{DatabaseConfig.CHROMA_COLLECTION_CONVERSATIONS}' récupérée")
+                except Exception:
+                    conversations_collection = client.create_collection(
+                        name=DatabaseConfig.CHROMA_COLLECTION_CONVERSATIONS,
+                        metadata={"description": "Conversation history embeddings"}
+                    )
+                    print(f"  ✓ Collection '{DatabaseConfig.CHROMA_COLLECTION_CONVERSATIONS}' créée")
+            else:
+                print("❌ Le client Chroma ne possède pas les méthodes attendues pour créer/récupérer des collections.")
+                return
+
             print("✅ Chroma DB initialisée")
             
         except Exception as e:
             print(f"❌ Erreur lors de l'initialisation de Chroma: {e}")
+            print("   Type d'erreur:", type(e).__name__)
+            import traceback
+            traceback.print_exc()
     
     @staticmethod
     def initialize_redis():
         """Initialise Redis (vérification de connexion)"""
-        from typing import Any
-        try:
-            import redis
-            RedisType = redis.Redis
-        except ImportError:
-            RedisType = Any  # Fallback if redis is not installed
-
         client = DatabaseConnector.get_redis_client()
         
         if client is None:
@@ -160,21 +182,18 @@ class DatabaseInitializer:
         
         try:
             # Test de connexion
-            if hasattr(client, 'ping'):
-                response = client.ping()
-                if response:
-                    print("📌 Redis connexion vérifiée")
+            client.ping()
             
             # Initialiser quelques clés de configuration
-            version_exists = client.exists("nety:version")
-            if not version_exists:
+            if not client.exists("nety:version"):
                 client.set("nety:version", "1.0.0")
-                print("📌 Version Redis configurée: 1.0.0")
             
             print("✅ Redis initialisé")
             
         except Exception as e:
             print(f"❌ Erreur lors de l'initialisation de Redis: {e}")
+            import traceback
+            traceback.print_exc()
     
     @classmethod
     def initialize_all(cls):

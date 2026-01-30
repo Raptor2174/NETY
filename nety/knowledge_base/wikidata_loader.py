@@ -6,6 +6,8 @@ try:
     WIKIDATA_AVAILABLE = True
 except ImportError:
     WIKIDATA_AVAILABLE = False
+    SPARQLWrapper = None
+    JSON = None
 
 
 class WikidataLoader:
@@ -13,12 +15,21 @@ class WikidataLoader:
     
     def __init__(self):
         if not WIKIDATA_AVAILABLE:
-            raise ImportError("SPARQLWrapper n'est pas installé. Installez-le avec: pip install sparqlwrapper")
+            raise ImportError(
+                "SPARQLWrapper n'est pas installé.\n"
+                "Installez-le avec: pip install sparqlwrapper"
+            )
+        
+        if SPARQLWrapper is None:
+            raise ImportError(
+                "SPARQLWrapper n'est pas disponible."
+            )
         
         self.sparql = SPARQLWrapper(
-            "https://query.wikidata.org/sparql",
-            agent='NETY/1.0 (https://github.com/Raptor2174/NETY)'
+            "https://query.wikidata.org/sparql"
         )
+        # Ajouter un User-Agent pour respecter les bonnes pratiques
+        self.sparql.addCustomHttpHeader("User-Agent", "NETY/1.0 (https://github.com/Raptor2174/NETY)")
     
     def get_entity_info(self, entity_name: str) -> dict:
         """
@@ -28,8 +39,11 @@ class WikidataLoader:
             entity_name: Nom de l'entité en français
             
         Returns:
-            Résultats de la requête SPARQL
+            Résultats de la requête SPARQL (dict avec 'results' et 'bindings')
         """
+        if not entity_name or not isinstance(entity_name, str):
+            return {"results": {"bindings": []}}
+        
         query = f"""
         SELECT ?item ?itemLabel ?description WHERE {{
           ?item rdfs:label "{entity_name}"@fr .
@@ -42,11 +56,12 @@ class WikidataLoader:
         LIMIT 5
         """
         
-        self.sparql.setQuery(query)
-        self.sparql.setReturnFormat(JSON)
-        
         try:
-            return self.sparql.query().convert()
+            self.sparql.setQuery(query)
+            self.sparql.setReturnFormat("json")
+            result = self.sparql.query().convert()
+            # Le résultat est déjà un dict après .convert() avec le format "json"
+            return result
         except Exception as e:
-            print(f"❌ Erreur lors de la requête Wikidata: {e}")
+            print(f"❌ Erreur lors de la requête Wikidata pour '{entity_name}': {e}")
             return {"results": {"bindings": []}}
