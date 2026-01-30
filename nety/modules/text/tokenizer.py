@@ -1,8 +1,11 @@
 """
 Tokenizer simple pour le prétraitement de texte
 """
+from email.mime import text
 import torch
 from typing import List, Dict
+import json
+import re
 
 class SimpleTokenizer:
     """Tokenizer basique pour convertir du texte en tenseurs"""
@@ -54,3 +57,24 @@ class SimpleTokenizer:
         """Convertit un tensor d'indices en texte"""
         words = [self.idx_to_word.get(int(idx.item()), "<unk>") for idx in indices]
         return " ".join([w for w in words if w != "<pad>"])
+
+
+    def save_vocab(self, filepath: str):
+        """Sauvegarde le vocabulaire dans un fichier JSON"""
+        vocab_data = {
+            "word_to_idx": self.word_to_idx,
+            "idx_to_word": {str(k): v for k, v in self.idx_to_word.items()},
+            "vocab_size": self.vocab_size,
+            "next_idx": self.next_idx
+        }
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(vocab_data, f, ensure_ascii=False, indent=2)
+
+    def load_vocab(self, filepath: str):
+        """Charge le vocabulaire depuis un fichier JSON"""
+        with open(filepath, 'r', encoding='utf-8') as f:
+            vocab_data = json.load(f)
+        self.word_to_idx = vocab_data["word_to_idx"]
+        self.idx_to_word = {int(k): v for k, v in vocab_data["idx_to_word"].items()}
+        self.vocab_size = vocab_data["vocab_size"]
+        self.next_idx = vocab_data["next_idx"]
