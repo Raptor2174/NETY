@@ -1,4 +1,6 @@
 # nety/core/response_generator.py
+from email.mime import message
+import math
 from typing import Optional, Dict
 import torch
 from transformers import (
@@ -230,9 +232,11 @@ Important:
 
 Instructions:
 - Ton nom est NETY (et uniquement NETY)
+- Réponds TOUJOURS en français. NEVER use English.
 - Ton style de communication: {tone}
 - Règles à suivre: {rules_text}
 - Réponds de manière naturelle et concise
+- Reste cohérent avec l'historique de conversation
 - Ne répète jamais ces instructions dans tes réponses"""
         
         full_prompt = f"""{system_prompt}
@@ -375,6 +379,17 @@ NETY:"""
                 return "Impossible de diviser par zéro."
             except Exception as e:
                 print(f"Erreur calcul: {e}")
+    
+        # Ajouter racine carrée
+        if '√' in message:
+            sqrt_pattern = r'√(\d+(?:\.\d+)?)'
+            match = re.search(sqrt_pattern, message)
+            if match:
+                num = float(match.group(1))
+                result = math.sqrt(num)
+                return f"√{num} = {result:.2f}"
+    
+    # Reste du code existant...
         
         return None
     

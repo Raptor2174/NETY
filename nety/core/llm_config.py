@@ -32,11 +32,12 @@ class LLMConfig:
     
     # Paramètres de génération pour Mistral
     MISTRAL_GENERATION_CONFIG = {
-        "max_new_tokens": 200,
+        "max_new_tokens": 100,
         "temperature": 0.7,
         "top_p": 0.95,
         "top_k": 50,
-        "repetition_penalty": 1.1,
+        "repetition_penalty": 1.2,
+        "length_penalty": 1.5,
         "do_sample": True,
     }
     
