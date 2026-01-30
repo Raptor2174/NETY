@@ -8,6 +8,8 @@ from nety.cortex_limbic.emotion_engine import EmotionEngine
 from nety.knowledge_base.knowledge_manager import KnowledgeManager
 from nety.core.intent_analyzer import IntentAnalyzer
 from nety.core.response_generator import ResponseGenerator
+from nety.core.llm_config import LLMConfig
+
 
 
 class Brain:
@@ -19,8 +21,14 @@ class Brain:
         self.memory = MemoryManager()
         self.knowledge = KnowledgeManager()
         self.intent_analyzer = IntentAnalyzer()
-        self.response_generator = ResponseGenerator()
-        self.emotion_engine = EmotionEngine()
+        # Initialiser avec Mistral
+        print("🧠 Initialisation du cerveau NETY avec Mistral-7B...")
+        self.response_generator = ResponseGenerator(model_type="mistral")
+        
+        # Afficher les infos
+        model_info = self.response_generator.get_model_info()
+        print(f"✅ Modèle chargé: {model_info['model_name']}")
+        print(f"📊 Contexte max: {model_info['context_length']} tokens")
         
         # Historique des interactions pour get_context()
         self.context_history = []

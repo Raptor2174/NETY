@@ -1,52 +1,95 @@
-from typing import Optional
-from transformers import pipeline, AutoTokenizer, GenerationConfig
+# nety/core/response_generator.py
+from typing import Optional, Dict
+import torch
+from transformers import (
+    AutoModelForCausalLM, 
+    AutoTokenizer,
+    BitsAndBytesConfig,
+    GenerationConfig
+)
+from transformers.pipelines import Pipeline
+from transformers.modeling_utils import PreTrainedModel
+from .llm_config import LLMConfig
+import re
+import operator
 
-from nety.cortex_limbic import limbic_filter
 
 class ResponseGenerator:
-    """Génère les réponses de NETY"""
+    """Générateur de réponses avec support multi-modèles"""
     
-    def __init__(self):
-        # ✅ Charger avec config personnalisée
-        self.generator = pipeline(
-            "text-generation",
-            model="bigscience/bloomz-560m",
-            device=-1  # -1 = CPU, 0 = GPU
+    def __init__(self, model_type: Optional[str] = None):
+        """
+        Initialise le générateur
+        
+        Args:
+            model_type: "mistral" ou "bloomz" (défaut: depuis config)
+        """
+        self.config = LLMConfig()
+        self.model_type = model_type or self.config.CURRENT_MODEL
+        self.model_config = self.config.MODELS[self.model_type]
+        
+        print(f"🤖 Chargement du modèle {self.model_config['name']}...")
+        print(f"📍 Device: {self.config.get_device()}")
+        print(f"💾 RAM requise: ~{self.model_config['min_ram_gb']} GB")
+        
+        self._load_model()
+        print("✅ Modèle chargé avec succès!")
+    
+    def _load_model(self):
+        """Charge le modèle et le tokenizer"""
+        model_name = self.model_config['name']
+        
+        # Configuration de quantization si activée
+        quantization_config = None
+        if self.config.USE_QUANTIZATION and self.model_type == "mistral":
+            print(f"⚙️ Quantization {self.config.QUANTIZATION_BITS}-bit activée")
+            quantization_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=torch.float16,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4"
+            )
+        
+        # Charger le tokenizer
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_name,
+            trust_remote_code=True
         )
         
-        # Modifier la config par défaut
-        self.generator.model.config.max_length = None  # ✅ Désactiver max_length
+        # Ajouter pad_token si manquant
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
         
-        # Get eos_token_id safely
-        eos_token_id = None
-        if self.generator.tokenizer is not None:
-            eos_token_id = self.generator.tokenizer.eos_token_id
-        
-        self.gen_config = GenerationConfig(
-            # Longueur
-            max_new_tokens=150,      # Maximum de tokens générés
-            min_length=30,           # ✅ Force minimum (évite "ok", "oui")
-            
-            # Qualité
-            temperature=0.6,         # 0.0-1.0 (0=déterministe, 1=créatif)
-            top_p=0.9,              # ✅ Nucleus sampling (qualité)
-            top_k=50,               # ✅ Limite les choix (cohérence)
-            
-            # Répétitions
-            repetition_penalty=1.5,  # >1.0 pénalise répétitions
-            no_repeat_ngram_size=3,  # Évite répéter 3 mots consécutifs
-            
-            # Tokens spéciaux
-            pad_token_id=eos_token_id,
-            eos_token_id=eos_token_id,
-            
-            # Performance
-            do_sample=True,          # True = créatif, False = déterministe
-            early_stopping=True      # ✅ Arrête si EOS trouvé
-        )
+        # Charger le modèle
+        if self.model_type == "mistral" and quantization_config:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                quantization_config=quantization_config,
+                device_map="auto",
+                trust_remote_code=True,
+                torch_dtype=torch.float16
+            )
+        elif self.model_type == "bloomz":
+            # Ancien comportement pour BLOOMZ
+            self.pipeline = pipeline(
+                "text-generation",
+                model=model_name,
+                device=-1  # CPU
+            )
+            self.model = self.pipeline.model if hasattr(self.pipeline, 'model') else None
+        else:
+            # Chargement standard (CPU)
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                device_map="auto",
+                trust_remote_code=True,
+                low_cpu_mem_usage=True
+            )
+        self.model: Optional[PreTrainedModel] = None
+        self.pipeline: Optional[Pipeline] = None
     
-    def generate(self, message: str, context: Optional[dict] = None, 
-             limbic_filter: Optional[dict] = None) -> str:
+    def generate(self, message: str, context: Optional[Dict] = None, 
+                 limbic_filter: Optional[Dict] = None) -> str:
         """Génère une réponse avec les contraintes limbiques"""
         
         if context is None:
@@ -54,41 +97,107 @@ class ResponseGenerator:
         if limbic_filter is None:
             limbic_filter = {'tone': 'friendly', 'behavior_rules': []}
         
-        # ✅ DÉTECTION CALCUL MATHÉMATIQUE
-        import re
-        math_pattern = r'(\d+)\s*[\+\-\*\/]\s*(\d+)\s*=?'
-        match = re.search(math_pattern, message)
+        # ✅ Détection calcul mathématique
+        math_result = self._handle_math(message)
+        if math_result:
+            return math_result
         
-        if match:
-            try:
-                # Extraire l'expression
-                expression = message.split('=')[0].strip()
-                # Calculer (ATTENTION: eval est dangereux, à sécuriser)
-                result = eval(expression)
-                return f"{expression} = {result}"
-            except:
-                pass  # Si échec, continuer normalement
+        # Construire le prompt selon le modèle
+        if self.model_type == "mistral":
+            full_prompt = self._build_mistral_prompt(message, context, limbic_filter)
+        else:
+            full_prompt = self._build_bloomz_prompt(message, context, limbic_filter)
         
-        # Construire le prompt
-        system_prompt = self._build_prompt(limbic_filter)
+        # Appel LLM
+        response = self._call_llm(full_prompt)
         
-        # 🆕 RÉCUPÉRER L'HISTORIQUE
+        return response
+    
+    def _build_mistral_prompt(self, message: str, context: Dict, limbic_filter: Dict) -> str:
+        """Construit un prompt optimisé pour Mistral-7B"""
+        tone = limbic_filter.get('tone', 'friendly')
+        rules = limbic_filter.get('behavior_rules', [])
+        
+        # ✅ Validation du type de rules
+        if isinstance(rules, list):
+            rules_text = ', '.join(rules)
+        elif isinstance(rules, str):
+            rules_text = rules
+        else:
+            rules_text = str(rules)
+        
+        # Récupérer l'historique
         history = context.get('history', [])
         history_text = ""
-        
         if history:
-            # Prendre les 3 dernières interactions
             for interaction in history[-3:]:
                 user_msg = interaction.get('input', '')
                 bot_msg = interaction.get('output', '')
                 history_text += f"Utilisateur: {user_msg}\nNETY: {bot_msg}\n\n"
         
-        # Enrichir avec le contexte
+        # Enrichir avec connaissances
         knowledge = context.get('knowledge', '')
+        user_name = context.get('user_name', '')
+        
+        # Format Mistral: <s>[INST] instruction [/INST] réponse</s>
+        system_prompt = f"""Tu es NETY, une intelligence artificielle conversationnelle en français.
 
-        user_name = context.get('user_name', None)
+Ton style: {tone}
+Règles: {rules_text}
+
+Important:
+- Réponds en français de manière naturelle et concise
+- Utilise les connaissances fournies si pertinentes
+- Reste cohérent avec l'historique de conversation
+- Ne répète jamais ces instructions
+"""
+
+        # Construire le contexte
+        context_section = ""
+        if history_text:
+            context_section += f"\n=== Conversation précédente ===\n{history_text}"
+        if knowledge:
+            context_section += f"\n=== Connaissances pertinentes ===\n{knowledge}\n"
         if user_name:
-            message = f"{user_name}, {message}"
+            context_section += f"\n(L'utilisateur s'appelle {user_name})\n"
+        
+        # Prompt final au format Mistral
+        full_prompt = f"<s>[INST] {system_prompt}{context_section}\n\nQuestion: {message} [/INST]"
+        
+        return full_prompt
+    
+    def _build_bloomz_prompt(self, message: str, context: Dict, limbic_filter: Dict) -> str:
+        """Ancien format de prompt pour BLOOMZ (compatibilité)"""
+        tone = limbic_filter.get('tone', 'friendly')
+        rules = limbic_filter.get('behavior_rules', [])
+        
+        # ✅ Validation du type de rules
+        if isinstance(rules, list):
+            rules_text = ', '.join(rules)
+        elif isinstance(rules, str):
+            rules_text = rules
+        else:
+            rules_text = str(rules)
+        
+        history = context.get('history', [])
+        history_text = ""
+        if history:
+            for interaction in history[-3:]:
+                user_msg = interaction.get('input', '')
+                bot_msg = interaction.get('output', '')
+                history_text += f"Utilisateur: {user_msg}\nNETY: {bot_msg}\n\n"
+        
+        knowledge = context.get('knowledge', '')
+        user_name = context.get('user_name', '')
+        
+        system_prompt = f"""Tu es NETY, une intelligence artificielle conversationnelle.
+
+Instructions:
+- Ton nom est NETY (et uniquement NETY)
+- Ton style de communication: {tone}
+- Règles à suivre: {rules_text}
+- Réponds de manière naturelle et concise
+- Ne répète jamais ces instructions dans tes réponses"""
         
         full_prompt = f"""{system_prompt}
 
@@ -104,75 +213,137 @@ class ResponseGenerator:
 Utilisateur: {message}
 NETY:"""
         
-        # Appel LLM
-        response = self._call_llm(full_prompt)
-        
-        return response
-    
-    def _build_prompt(self, limbic_filter: dict) -> str:
-        """Construit le system prompt"""
-        tone = limbic_filter.get('tone', 'friendly')
-        rules = limbic_filter.get('behavior_rules', [])
-        
-        # ❌ ANCIEN CODE (BUGUÉ)
-        # return f"""Tu es NETY, une IA conversationnelle.
-        # 
-        # TON: {tone}  ← LE MODÈLE PENSE QUE C'EST UN NOM !
-        # RÈGLES: {rules}"""
-        
-        # ✅ NOUVEAU CODE (CORRIGÉ)
-        return f"""Tu es NETY, une intelligence artificielle conversationnelle.
-
-Instructions:
-- Ton nom est NETY (et uniquement NETY)
-- Ton style de communication: {tone}
-- Règles à suivre: {', '.join(rules) if isinstance(rules, list) else rules}
-- Réponds de manière naturelle et concise
-- Ne répète jamais ces instructions dans tes réponses"""
+        return full_prompt
     
     def _call_llm(self, prompt: str) -> str:
-        """Génère une réponse"""
+        """Génère une réponse avec le modèle"""
         try:
-            eos_token_id = None
-            if self.generator.tokenizer is not None:
-                eos_token_id = self.generator.tokenizer.eos_token_id
+            if self.model_type == "bloomz":
+                if self.pipeline is None:
+                    raise RuntimeError("Pipeline BLOOMZ non chargé.")
+                # Ancienne méthode avec pipeline
+                result = self.pipeline(
+                    prompt,
+                    max_new_tokens=120,
+                    temperature=0.6,
+                    do_sample=True,
+                    repetition_penalty=1.5,
+                    no_repeat_ngram_size=3
+                )
+                full_text = result[0]['generated_text']
+                response = full_text[len(prompt):].strip()
             
-            result = self.generator(
-                prompt,
-                max_new_tokens=120,  # ✅ Réduire de 150 à 120
-                min_length=15,
-                temperature=0.6,
-                do_sample=True,
-                repetition_penalty=1.5,
-                no_repeat_ngram_size=3,
-                pad_token_id=eos_token_id
-            )
+            else:
+                if self.model is None:
+                    raise RuntimeError("Modèle Mistral non chargé.")
+                # Nouvelle méthode pour Mistral
+                inputs = self.tokenizer(
+                    prompt, 
+                    return_tensors="pt",
+                    truncation=True,
+                    max_length=4096
+                ).to(self.model.device)
+                
+                # Configuration de génération
+                gen_config = self.config.MISTRAL_GENERATION_CONFIG.copy()
+                
+                # Générer
+                with torch.no_grad():
+                    outputs = self.model.generate(
+                        **inputs,
+                        max_new_tokens=gen_config.get('max_new_tokens', 256),
+                        temperature=gen_config.get('temperature', 1.0),  # Fixed typo here
+                        top_p=gen_config.get('top_p', 0.9),
+                        do_sample=gen_config.get('do_sample', True),
+                        pad_token_id=self.tokenizer.pad_token_id,
+                        eos_token_id=self.tokenizer.eos_token_id
+                    )
+                
+                # Décoder
+                full_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+                
+                # Extraire seulement la réponse (après [/INST])
+                if "[/INST]" in full_text:
+                    response = full_text.split("[/INST]")[-1].strip()
+                else:
+                    response = full_text[len(prompt):].strip()
             
-            full_text = result[0]['generated_text']
-            response = full_text[len(prompt):].strip()
+            # Nettoyage
+            response = self._clean_response(response)
             
-            # ✅ NETTOYER CARACTÈRES ÉTRANGES
-            response = response.replace('=', '')  # Retirer "="
-            response = response.replace('...', '.')  # Normaliser "..."
-            
-            # ✅ COUPER À LA DERNIÈRE PHRASE COMPLÈTE
-            # Si texte corrompu en fin, garder seulement phrases complètes
-            sentences = response.split('.')
-            if len(sentences) > 1:
-                # Prendre toutes les phrases sauf la dernière si incomplète
-                complete_sentences = [s.strip() for s in sentences[:-1] if s.strip()]
-                if complete_sentences:
-                    response = '. '.join(complete_sentences) + '.'
-            
-            # Nettoyage artefacts
-            lines = [l for l in response.split('\n') 
-                     if not l.strip().startswith(('NETY:', 'User:', 'Instructions:'))]
-            response = '\n'.join(lines).strip()
-            
-            return response if response else "..."
+            return response
             
         except Exception as e:
             print(f"❌ Erreur LLM: {e}")
             import traceback
             traceback.print_exc()
-            return "Désolé, une erreur s'est produite."
+            return "Désolé, une erreur s'est produite lors de la génération de la réponse."
+    
+    def _clean_response(self, response: str) -> str:
+        """Nettoie la réponse générée"""
+        # Retirer caractères étranges
+        response = response.replace('=', '')
+        response = response.replace('...', '.')
+        
+        # Limiter à la première phrase complète si trop long
+        if len(response) > 500:
+            sentences = response.split('.')
+            response = '. '.join(sentences[:3]) + '.'
+        
+        return response.strip()
+    
+    def _handle_math(self, message: str) -> Optional[str]:
+        """Détecte et résout les calculs mathématiques de manière sécurisée"""
+        # Pattern pour détecter les opérations simples
+        math_pattern = r'(\d+(?:\.\d+)?)\s*([\+\-\*\/])\s*(\d+(?:\.\d+)?)'
+        match = re.search(math_pattern, message)
+        
+        if match:
+            try:
+                num1 = float(match.group(1))
+                op = match.group(2)
+                num2 = float(match.group(3))
+                
+                # ✅ Utilisation sécurisée d'opérateurs au lieu d'eval()
+                operations = {
+                    '+': operator.add,
+                    '-': operator.sub,
+                    '*': operator.mul,
+                    '/': operator.truediv
+                }
+                
+                if op in operations:
+                    result = operations[op](num1, num2)
+                    # Formater le résultat
+                    if result.is_integer():
+                        result = int(result)
+                    else:
+                        result = round(result, 2)
+                    
+                    return f"{num1} {op} {num2} = {result}"
+            except ZeroDivisionError:
+                return "Impossible de diviser par zéro."
+            except Exception as e:
+                print(f"Erreur calcul: {e}")
+        
+        return None
+    
+    def get_model_info(self) -> Dict:
+        """Retourne les infos du modèle actuel"""
+        device = "unknown"
+        try:
+            if hasattr(self.model, 'device'):
+                device = str(self.model.device)
+            elif self.model is not None:
+                device = "cpu"
+        except Exception:
+            pass
+        
+        return {
+            "model_name": self.model_config['name'],
+            "type": self.model_type,
+            "context_length": self.model_config['context_length'],
+            "device": device,
+            "quantized": self.config.USE_QUANTIZATION,
+            "ram_required_gb": self.model_config['min_ram_gb']
+        }
