@@ -2,12 +2,11 @@
 Chargeur Wikidata pour NETY Knowledge Base
 """
 try:
-    from SPARQLWrapper import SPARQLWrapper, JSON
+    from SPARQLWrapper import SPARQLWrapper
     WIKIDATA_AVAILABLE = True
 except ImportError:
     WIKIDATA_AVAILABLE = False
     SPARQLWrapper = None
-    JSON = None
 
 
 class WikidataLoader:
@@ -61,7 +60,10 @@ class WikidataLoader:
             self.sparql.setReturnFormat("json")
             result = self.sparql.query().convert()
             # Le résultat est déjà un dict après .convert() avec le format "json"
-            return result
+            if isinstance(result, dict):
+                return {"results": result.get("results", {"bindings": []})}
+            return {"results": {"bindings": []}}
+        
         except Exception as e:
             print(f"❌ Erreur lors de la requête Wikidata pour '{entity_name}': {e}")
             return {"results": {"bindings": []}}

@@ -112,7 +112,8 @@ class DatabaseInitializer:
     @staticmethod
     def initialize_chroma():
         """Initialise Chroma DB avec les collections"""
-        client = DatabaseConnector.get_chroma_client()
+        from typing import Any
+        client: Any = DatabaseConnector.get_chroma_client()
         
         if client is None:
             print("⚠️  Chroma DB non disponible, fonctionnement en mode dégradé")
@@ -172,7 +173,8 @@ class DatabaseInitializer:
     @staticmethod
     def initialize_redis():
         """Initialise Redis (vérification de connexion)"""
-        client = DatabaseConnector.get_redis_client()
+        from typing import Any
+        client: Any = DatabaseConnector.get_redis_client()
         
         if client is None:
             print("⚠️  Redis non disponible, fonctionnement sans cache")

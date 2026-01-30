@@ -55,22 +55,26 @@ class NETYBrainWithRNN:
             {
                 "title": "Intelligence Artificielle",
                 "content": "L'intelligence artificielle (IA) est la simulation de processus d'intelligence humaine par des machines",
-                "category": "ia"
+                "tags": ["ia"],
+                "metadata": {"category": "ia"}
             },
             {
                 "title": "RNN",
                 "content": "Les réseaux de neurones récurrents (RNN) sont adaptés pour traiter des séquences de données",
-                "category": "deep_learning"
+                "tags": ["deep_learning"],
+                "metadata": {"category": "deep_learning"}
             },
             {
                 "title": "Python",
                 "content": "Python est un langage de programmation interprété, orienté objet et de haut niveau",
-                "category": "programmation"
+                "tags": ["programmation"],
+                "metadata": {"category": "programmation"}
             },
             {
                 "title": "NETY",
                 "content": "NETY est une IA multimodale capable de traiter du texte, des images et de l'audio",
-                "category": "projet"
+                "tags": ["projet"],
+                "metadata": {"category": "projet"}
             }
         ]
         

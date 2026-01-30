@@ -83,17 +83,21 @@ class DashboardView:
     def update_ai_status(self):
         """Met à jour l'affichage du statut de l'IA"""
         if self.nety_adapter.is_running():
-            self.ai_status_label.config(text="🟢 IA EN MARCHE", fg="green")
-            self.toggle_button.config(
-                text="⏸ Arrêter l'IA",
-                bg="#f44336"  # Rouge
-            )
+            if self.ai_status_label:
+                self.ai_status_label.config(text="🟢 IA EN MARCHE", fg="green")
+            if self.toggle_button:
+                self.toggle_button.config(
+                    text="⏸ Arrêter l'IA",
+                    bg="#f44336"  # Rouge
+                )
         else:
-            self.ai_status_label.config(text="⚫ IA ARRÊTÉE", fg="red")
-            self.toggle_button.config(
-                text="▶ Démarrer l'IA",
-                bg="#4CAF50"  # Vert
-            )
+            if self.ai_status_label:
+                self.ai_status_label.config(text="⚫ IA ARRÊTÉE", fg="red")
+            if self.toggle_button:
+                self.toggle_button.config(
+                    text="▶ Démarrer l'IA",
+                    bg="#4CAF50"  # Vert
+                )
 
     def refresh(self):
         """Rafraîchit la liste des modules"""
