@@ -91,11 +91,27 @@ class NETYSystem:
         msg_type = message.get("type", "unknown")
         content = message.get("content", "")
         
+        # 🆕 AJOUTER CES LIGNES POUR DÉBUGGER ET NETTOYER
+        # ================================================
+        # DEBUG : Afficher AVANT nettoyage
+        print(f"🐛 AVANT nettoyage: '{content}'")
+        
+        # Nettoyer tous les préfixes possibles
+        prefixes_to_remove = ["CHAT: ", "PROMPT: ", "CHAT:", "PROMPT:"]
+        for prefix in prefixes_to_remove:
+            if content.startswith(prefix):
+                content = content[len(prefix):].strip()
+                break  # Arrêter après le premier match
+        
+        # DEBUG : Afficher APRÈS nettoyage
+        print(f"🐛 APRÈS nettoyage: '{content}'")
+        # ================================================
+        
         bridge._add_log(f"📨 Message Dashboard reçu: {msg_type}")
         
         if msg_type == "prompt":
             # Traiter comme un prompt normal
-            response = self.process_data(content)
+            response = self.process_data(content)  # ✅ content est nettoyé
             # Renvoyer la réponse au Dashboard
             bridge.send_from_nety(response, msg_type="response")
             
@@ -105,9 +121,9 @@ class NETYSystem:
             
         elif msg_type == "chat":
             # Traiter comme une conversation
-            response = self.process_data(content)
+            response = self.process_data(content)  # ✅ content est nettoyé
             bridge.send_from_nety(response, msg_type="chat_response")
-    
+
     def execute_command(self, command: str):
         """Exécute une commande système"""
         bridge._add_log(f"⚙️ Commande reçue: {command}")
@@ -165,13 +181,20 @@ class NETYSystem:
     def process_data(self, data):
         """Traite les données avec le Brain"""
         if self.brain:
-            result = self.brain.think(data)
-            
-            # Synchroniser l'état des modules
-            modules_status = self.brain.get_modules_status()
-            bridge.update_modules_status(modules_status)
-            
-            return result
+            try:
+                result = self.brain.think(data)
+                
+                # Synchroniser l'état des modules
+                modules_status = self.brain.get_modules_status()
+                bridge.update_modules_status(modules_status)
+                
+                return result
+            except Exception as e:
+                error_msg = f"Erreur lors du traitement: {type(e).__name__}: {str(e)}"
+                bridge._add_log(f"❌ {error_msg}")
+                import traceback
+                traceback.print_exc()
+                return f"❌ Erreur: {str(e)}"
         
         return f"processed_{data}"
 

@@ -4,7 +4,7 @@ import time
 class Config(object):
     # General Settings
     APP_NAME = "Nety AI"
-    VERSION = "1.0.0"
+    VERSION = "0.1.4"
     DEBUG = True
 
     # Database Settings

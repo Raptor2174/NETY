@@ -30,23 +30,28 @@ class Brain:
             "knowledge_base": "actif",
             "intent_analyzer": "actif"
         }
+        
+        # Dictionnaire des modules pour compatibilité
+        self.modules = {}
+        self.context = {}
+        self.state = "active"
     
     def think(self, message: str) -> str:
-        """
-        Méthode principale pour traiter un message
-        C'est l'entrée principale du Brain depuis le système NETY
+        """Méthode principale pour traiter un message"""
         
-        Args:
-            message: Le message ou les données à traiter
+        # ✅ NETTOYER LE MESSAGE AVANT STOCKAGE
+        # Retirer les préfixes même ici (au cas où)
+        cleaned_message = message
+        for prefix in ["CHAT: ", "PROMPT: ", "CHAT:", "PROMPT:"]:
+            if cleaned_message.startswith(prefix):
+                cleaned_message = cleaned_message[len(prefix):].strip()
+                break
         
-        Returns:
-            La réponse générée par le Brain
-        """
-        # Stocker l'entrée
-        interaction = {"input": message}
+        # Stocker l'entrée NETTOYÉE
+        interaction = {"input": cleaned_message}  # ✅ Version propre
         
         # Traiter le message via le pipeline complet
-        response = self.process_message(message)
+        response = self.process_message(cleaned_message)  # ✅ Ici aussi
         
         # Stocker la sortie
         interaction["output"] = response
@@ -58,12 +63,37 @@ class Brain:
         
         return response
     
+    # Dans brain.py, méthode retrieve_context()
+
     def retrieve_context(self, message: str, intent: dict) -> dict:
         """Récupère le contexte basé sur le message et l'intention"""
+        
+        # ... code existant pour knowledge ...
+        
+        # ✅ EXTRAIRE LES INFORMATIONS CLÉS DE L'HISTORIQUE
+        user_name = None
+        for interaction in reversed(self.context_history[-10:]):
+            user_msg = interaction.get('input', '').lower()
+            # Détecter "je m'appelle X" ou "je suis X"
+            if "je m'appel" in user_msg or "je suis" in user_msg:
+                # Extraire le nom (simpliste)
+                words = user_msg.split()
+                try:
+                    if "m'appel" in user_msg:
+                        idx = words.index("m'appel") if "m'appel" in words else words.index("m'appelle")
+                        user_name = words[idx + 1].strip('.,!?')
+                    elif "je suis" in user_msg:
+                        idx = words.index("suis")
+                        user_name = words[idx + 1].strip('.,!?')
+                except:
+                    pass
+        
         context = {
             "message": message,
             "intent": intent,
-            "history": self.context_history[-5:] if self.context_history else []
+            "history": self.context_history[-5:],
+            "knowledge": self.knowledge.get_knowledge(intent.get('type', 'general')) if hasattr(self.knowledge, 'get_knowledge') else {},
+            "user_name": user_name  # ✅ Info clé extraite
         }
         return context
     
@@ -88,9 +118,9 @@ class Brain:
         
         return response
     
-def get_modules_status(self):
-    """Retourne l'état de tous les modules"""
-    return self.modules_status.copy()
+    def get_modules_status(self):
+        """Retourne l'état de tous les modules"""
+        return self.modules_status.copy()
     
     def register_module(self, name, module):
         """Enregistre un nouveau module"""
@@ -109,27 +139,41 @@ def get_modules_status(self):
     
     def add_to_memory(self, input_data, output_data):
         """Ajoute une interaction à la mémoire"""
-        self.memory.append({
-            "input": input_data,
-            "output": output_data
-        })
-        # Limiter la mémoire à 100 entrées
-        if len(self.memory) > 100:
-            self.memory.pop(0)
+        summary = f"Input: {str(input_data)[:50]} | Output: {str(output_data)[:50]}"
+        self.memory.add_memory(summary)
     
     def get_memory(self):
         """Récupère la mémoire"""
         return self.memory
     
+    def clear(self):
+        """Vide le Brain (mémoire et contexte)"""
+        self.clear_memory()
+        self.context_history = []
+
+    def clear_all(self):
+        """Vide complètement le Brain"""
+        self.clear_memory()
+        self.context_history = []
+        # Réinitialiser KnowledgeManager en ré-instanciant l'objet
+        self.knowledge = KnowledgeManager()
+
+    def reset(self):
+        """Réinitialise le Brain"""
+        self.clear_memory()
+        self.context_history = []
+        self.state = "active"
+
     def clear_memory(self):
         """Vide la mémoire"""
-        self.memory = []
+        # Réinitialiser MemoryManager en ré-instanciant l'objet
+        self.memory = MemoryManager()
     
     def set_context(self, key, value):
         """Définit un élément de contexte"""
         self.context[key] = value
     
-    def get_context(self, key=None):
+    def get_context_value(self, key=None):
         """Récupère le contexte ou un élément"""
         if key is None:
             return self.context
@@ -164,21 +208,22 @@ def get_modules_status(self):
     def set_state(self, new_state):
         """Définit un nouvel état"""
         self.state = new_state
+    
     def update_memory(self, message: str, response: str):
         """Met à jour la mémoire"""
         summary = f"User: {message[:50]}... | Response: {response[:50]}..."
         self.memory.add_memory(summary)
     
-def get_context(self) -> list:
-    """
-    Retourne l'historique des interactions (contexte)
-    Utilisé pour les tests et le debugging
-    
-    Returns:
-        List of interactions with {input, output} keys
-        Liste des interactions {input, output}
-    """
-    return self.context_history.copy()
+    def get_context(self) -> list:
+        """
+        Retourne l'historique des interactions (contexte)
+        Utilisé pour les tests et le debugging
+        
+        Returns:
+            List of interactions with {input, output} keys
+            Liste des interactions {input, output}
+        """
+        return self.context_history.copy()
 
 
 # Alias pour compatibilité

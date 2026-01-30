@@ -15,6 +15,7 @@ class NetyAdapter:
     
     def __init__(self):
         """Initialise l'adaptateur en se connectant au Bridge"""
+        self.admin_messages = []
         # Pas besoin de variables locales, tout passe par le Bridge
         bridge._add_log("📱 NetyAdapter (Dashboard) connecté au Bridge")
     
@@ -158,6 +159,30 @@ class NetyAdapter:
     def get_stats(self) -> Dict:
         """Récupère les statistiques du système"""
         return bridge.get_stats()
+    
+    def check_for_admin_message(self) -> Optional[str]:
+        """
+        Vérifie s'il y a des messages provenant de l'administrateur
+        via le tableau de bord.
+        """
+        if self.admin_messages:
+            return self.admin_messages.pop(0)
+        return None
+
+    def get_all_admin_messages(self):
+        """
+        Récupère tous les messages admin en attente.
+        À adapter selon ta logique métier.
+        """
+        return []  # À remplacer par la vraie récupération des messages
+    
+    def get_admin_message(self) -> Optional[str]:
+        """
+        Récupère un message admin s'il y en a un.
+        """
+        if self.admin_messages:
+            return self.admin_messages.pop(0)
+        return None
 
 
 # Fonction utilitaire pour compatibilité
