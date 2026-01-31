@@ -2,6 +2,7 @@
 Module Brain - Cerveau central de NETY
 """
 # nety/core/brain.py
+from typing import Optional
 from nety.cortex_limbic.limbic_filter import LimbicFilter
 from nety.cortex_limbic.memory_manager import MemoryManager
 from nety.cortex_limbic.emotion_engine import EmotionEngine
@@ -15,15 +16,20 @@ from nety.core.llm_config import LLMConfig
 class Brain:
     """Le cerveau principal de NETYOrchestre tous les modules et gère l'interaction avec le système"""
     
-    def __init__(self):
+    def __init__(self, model_type: Optional[str] = None):
         # Initialisation des modules
         self.limbic_filter = LimbicFilter()
         self.memory = MemoryManager()
         self.knowledge = KnowledgeManager()
         self.intent_analyzer = IntentAnalyzer()
-        # Initialiser avec Mistral
-        print("🧠 Initialisation du cerveau NETY avec Mistral-7B...")
-        self.response_generator = ResponseGenerator(model_type="mistral")
+        
+        # Déterminer le modèle à utiliser
+        if model_type is None:
+            model_type = LLMConfig().CURRENT_MODEL
+        
+        # Initialiser avec le modèle choisi
+        print(f"🧠 Initialisation du cerveau NETY avec {model_type.upper()}...")
+        self.response_generator = ResponseGenerator(model_type=model_type)
         
         # Afficher les infos
         print(f"✅ Modèle chargé: Mistral-7B")

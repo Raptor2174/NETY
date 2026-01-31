@@ -32,8 +32,8 @@ class NETYSystem:
         )
         initialize_system()
         
-        # Initialiser le Brain
-        self.brain = Brain()
+        # Initialiser le Brain avec le modèle choisi
+        self.brain = Brain(model_type=self.model_type)
         
         # Notifier le Bridge
         bridge.set_brain_initialized(True)

@@ -1,7 +1,6 @@
 import torch
 import re
 import operator
-import requests
 from typing import Optional, Dict
 from transformers import (
     AutoTokenizer, 
