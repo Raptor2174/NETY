@@ -13,33 +13,25 @@ import math  # ✅ Import unique en haut
 
 
 class ResponseGenerator:
-    """Générateur de réponses intelligent (Local GPU + OpenAI)"""
+    """Générateur de réponses - Modèles locaux uniquement (Mistral ou BLOOMZ)"""
     
-    def __init__(self, model_type: Optional[str] = None, force_backend: Optional[str] = None):
+    def __init__(self, model_type: Optional[str] = None):
         """
         Initialise le générateur
         
         Args:
             model_type: "mistral" ou "bloomz" (défaut: depuis config)
-            force_backend: "local", "openai", ou None (auto)
         """
         from .llm_config import LLMConfig
         
         self.config = LLMConfig()
         self.model_type = model_type or self.config.CURRENT_MODEL
         self.model_config = self.config.MODELS[self.model_type]
-        self.force_backend = force_backend
         
         # Attributs
         self.model = None
         self.pipeline = None
         self.tokenizer = None
-        self.openai_available = False
-        self.openai_client = None  # ✅ AJOUT pour nouvelle API
-        
-        # ✅ Vérifier OpenAI
-        if self.config.OPENAI_CONFIG["enabled"]:
-            self.openai_available = self._check_openai()
         
         # ✅ Charger le modèle local
         print(f"🤖 Chargement du modèle {self.model_config['name']}...")
@@ -47,53 +39,6 @@ class ResponseGenerator:
         
         self._load_model()
         print("✅ Modèle local chargé avec succès!")
-    
-    def _check_openai(self) -> bool:
-        """Vérifie si OpenAI est disponible"""
-        api_key = self.config.OPENAI_CONFIG.get("api_key")
-        if not api_key:
-            print("⚠️ OpenAI API key manquante (définir OPENAI_API_KEY)")
-            return False
-        
-        try:
-            # ✅ NOUVELLE API OpenAI >= 1.0.0
-            from openai import OpenAI
-            self.openai_client = OpenAI(api_key=api_key)
-            print("✅ OpenAI API disponible (client v1.0+)")
-            return True
-        except ImportError:
-            print("⚠️ Module openai non installé (pip install openai)")
-            return False
-        except Exception as e:
-            print(f"⚠️ Erreur OpenAI init: {e}")
-            return False
-    
-    def _is_online(self) -> bool:
-        """Vérifie la connexion internet"""
-        try:
-            response = requests.get("https://api.openai.com", timeout=2)
-            return True
-        except:
-            return False
-    
-    def _should_use_openai(self) -> bool:
-        """Décide si on doit utiliser OpenAI"""
-        # Force backend si spécifié
-        if self.force_backend == "openai":
-            return self.openai_available and self._is_online()
-        if self.force_backend == "local":
-            return False
-        
-        # Mode intelligent
-        if not self.config.SMART_BACKEND:
-            return False
-        
-        # Si préfère local et GPU dispo → local
-        if self.config.PREFER_LOCAL and self.config.has_gpu():
-            return False
-        
-        # Sinon, OpenAI si online
-        return self.openai_available and self._is_online()
     
     def _load_model(self) -> None:
         """Charge le modèle local (optimisé GPU 4-bit)"""
@@ -162,57 +107,21 @@ class ResponseGenerator:
     
     def generate(self, message: str, context: Optional[Dict] = None, 
                  limbic_filter: Optional[Dict] = None) -> str:
-        """Génère une réponse (intelligent backend)"""
+        """Génère une réponse avec le modèle local"""
         
         if context is None:
             context = {}
         if limbic_filter is None:
             limbic_filter = {'tone': 'friendly', 'behavior_rules': []}
         
-        # ✅ Détection calcul mathématique (toujours local)
+        # ✅ Détection calcul mathématique
         math_result = self._handle_math(message)
         if math_result:
             return math_result
         
-        # ✅ DÉCISION BACKEND
-        use_openai = self._should_use_openai()
-        
-        if use_openai:
-            print("🌐 Utilisation: OpenAI API")
-            return self._generate_openai(message, context, limbic_filter)
-        else:
-            print("🖥️ Utilisation: Mistral Local GPU")
-            return self._generate_local(message, context, limbic_filter)
-    
-    def _generate_openai(self, message: str, context: Dict, limbic_filter: Dict) -> str:
-        """Génération via OpenAI API"""
-        try:
-            # ✅ NOUVELLE SYNTAXE OpenAI v1.0+
-            if self.openai_client is None:
-                raise RuntimeError("Client OpenAI non initialisé")
-            
-            # Construire le prompt
-            system_prompt = self._build_system_prompt(context, limbic_filter)
-            
-            response = self.openai_client.chat.completions.create(
-                model=self.config.OPENAI_CONFIG["model"],
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": message}
-                ],
-                max_tokens=self.config.OPENAI_CONFIG["max_tokens"],
-                temperature=self.config.OPENAI_CONFIG["temperature"],
-            )
-            
-            reply = response.choices[0].message.content.strip()
-            return self._clean_response(reply)
-        
-        except Exception as e:
-            print(f"❌ Erreur OpenAI: {e}")
-            import traceback
-            traceback.print_exc()
-            print("🔄 Fallback vers modèle local...")
-            return self._generate_local(message, context, limbic_filter)
+        # ✅ Génération locale uniquement
+        print(f"🖥️ Utilisation: {self.model_config['name']}")
+        return self._generate_local(message, context, limbic_filter)
     
     def _generate_local(self, message: str, context: Dict, limbic_filter: Dict) -> str:
         """Génération via modèle local"""
@@ -225,27 +134,6 @@ class ResponseGenerator:
         # Générer
         response = self._call_llm(full_prompt)
         return response
-    
-    def _build_system_prompt(self, context: Dict, limbic_filter: Dict) -> str:
-        """Construit le system prompt (pour OpenAI)"""
-        tone = limbic_filter.get('tone', 'friendly')
-        user_name = context.get('user_name', '')
-        
-        prompt = f"""Tu es NETY, une intelligence artificielle conversationnelle en français.
-
-Ton style: {tone}
-
-Règles importantes:
-- Réponds TOUJOURS en français, JAMAIS en anglais
-- Sois concis (1-2 phrases maximum)
-- Reste grammaticalement correct
-- Ne préfixe PAS ta réponse avec "NETY:" ou "Netty:"
-"""
-        
-        if user_name:
-            prompt += f"\n- L'utilisateur s'appelle {user_name}"
-        
-        return prompt
     
     def _build_mistral_prompt(self, message: str, context: Dict, limbic_filter: Dict) -> str:
         """Construit un prompt optimisé pour Mistral-7B"""
@@ -535,8 +423,6 @@ NETY:"""
             "model_name": self.model_config['name'],
             "device": self.config.get_device(),
             "quantization": f"{self.config.QUANTIZATION_BITS}-bit" if self.config.USE_QUANTIZATION else "None",
-            "openai_available": self.openai_available,
-            "smart_backend": self.config.SMART_BACKEND if hasattr(self.config, 'SMART_BACKEND') else False,
         }
         
         if torch.cuda.is_available():

@@ -1,10 +1,10 @@
 """
-Sélecteur de modèle interactif pour NETY
+Sélecteur de modèle interactif pour NETY - Modèles locaux uniquement
 """
 import os
 from typing import Literal
 
-ModelChoice = Literal["mistral", "bloomz", "llama"]
+ModelChoice = Literal["mistral", "bloomz"]
 
 class ModelSelector:
     """Gestionnaire de sélection de modèle"""
@@ -30,14 +30,7 @@ class ModelSelector:
                 "ram_gb": 2,
                 "cost": "Gratuit (utilise ton matériel)",
             },
-            "3": {
-                "name": "llama",
-                "display": "llama3.2:3b (HuggingFace - Modéré)",
-                "backend": "huggingface",
-                "requires_gpu": True,
-                "ram_gb": 4,
-                "cost": "Gratuit (utilise ton matériel)",
-            },
+            # Future models can be added here
 
         }
     
@@ -76,12 +69,6 @@ class ModelSelector:
     def auto_select(self, prefer_local: bool = True) -> ModelChoice:
         """Sélection automatique"""
         import torch
-        
-        if not prefer_local:
-            api_key = os.getenv("OPENAI_API_KEY", "")
-            if api_key:
-                print(f"🤖 Auto-sélection: OpenAI {self.config.OPENAI_CURRENT_MODEL}")
-                return "openai"
         
         if torch.cuda.is_available():
             print("🤖 Auto-sélection: Mistral-7B (GPU détecté)")

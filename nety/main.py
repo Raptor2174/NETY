@@ -3,6 +3,7 @@ from nety.core.brain import Brain
 from nety.core.config import Config
 from nety.core.system_init import initialize_system
 from nety.core.nety_bridge import bridge  # ← NOUVEAU
+from nety.core.model_selector import select_model
 
 
 class BoucleSettings:
@@ -14,11 +15,12 @@ class BoucleSettings:
 class NETYSystem:
     """Système principal NETY"""
 
-    def __init__(self):
+    def __init__(self, model_type=None):
         self.config = Config()
         self.running = False
         self.idle_counter = 0
         self.brain = None
+        self.model_type = model_type
 
     # ======================
     # DÉMARRAGE
@@ -215,10 +217,14 @@ class NETYSystem:
 # POINT D'ENTRÉE
 # ======================
 if __name__ == "__main__":
-    nety = NETYSystem()
-    nety.start()
-
+    # Demander à l'utilisateur quel modèle
+    chosen_model = select_model(interactive=True)
+    
+    # Créer le système avec le modèle choisi
+    system = NETYSystem(model_type=chosen_model)
+    system.start()
+    
     try:
-        nety.run()
+        system.run()
     except KeyboardInterrupt:
-        nety.stop()
+        system.stop()
