@@ -138,25 +138,11 @@ class ResponseGenerator:
                 print(f"✅ Modèle chargé sur GPU: {torch.cuda.get_device_name(0)}")
                 print(f"📊 VRAM utilisée: {torch.cuda.memory_allocated(0) / 1024**3:.2f} GB")
             
-            elif not has_gpu and self.config.USE_QUANTIZATION:
-                # ✅ 8-bit CPU fallback
-                print("⚙️ Quantization 8-bit activée (CPU)")
-                quantization_config = BitsAndBytesConfig(
-                    load_in_8bit=True,
-                    llm_int8_enable_fp32_cpu_offload=True
-                )
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_name,
-                    quantization_config=quantization_config,
-                    device_map="auto",
-                    trust_remote_code=True,
-                    low_cpu_mem_usage=True,
-                    torch_dtype=torch.float16
-                )
-            
             else:
-                # CPU fallback sans quantization
-                print("📦 Chargement standard sur CPU")
+                # CPU: pas de quantization (non fiable sur CPU)
+                print("📦 Chargement standard sur CPU (quantization désactivée)")
+                print("💡 Note: La quantization 8-bit sur CPU est instable et a été désactivée")
+                print("   Pour de meilleures performances, utilisez un GPU")
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_name,
                     device_map="cpu",
