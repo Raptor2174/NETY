@@ -265,5 +265,5 @@ USE_QUANTIZATION = True
 
 ---
 
-**Commit**: `806cfd6`  
+**Commits**: `806cfd6` (fix), `bc595c4` (documentation)  
 **Status**: ✅ RÉSOLU
