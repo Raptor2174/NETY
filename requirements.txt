@@ -1,22 +1,14 @@
 # NETY - Requirements
 # Python 3.12+
 
-# Remarque → Il y a trop de piblioteques pour le stade du projet actuel. Il faut imperativement nettoyer et optimiser cela.
-
-# Basic Libraries
-
-# Deep Learning Frameworks
+# Deep Learning Framework - PyTorch (Primary)
 torch>=2.1.0
 torchvision>=0.16.0
 torchaudio>=2.1.0
 torchtext>=0.16.0
-torchsummary>=1.5.1
-tensorflow>=2.15.0
-keras>=3.0.0
 
 # Audio Processing
 librosa>=0.10.1
-pyaudio>=0.2.14
 pyttsx3>=2.90
 
 # Natural Language Processing
@@ -24,40 +16,20 @@ spacy>=3.7.0
 # Pour installer le modèle français: python -m spacy download fr_core_news_sm
 
 # Knowledge Base - Databases
-chromadb>=0.4.0                          # Vector database pour recherche sémantique
-sentence-transformers>=2.2.0             # Embeddings multilingues pour Chroma
-redis>=5.0.0                             # Cache haute performance (optionnel)
-hiredis>=2.0.0                           # Performance boost pour Redis (optionnel)
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+
+
+# LLM - Mistral-7B (si vous avai +16GO de RAM GPU)
+transformers>=4.36.0
+accelerate>=0.25.0
+bitsandbytes>=0.41.0
+sentencepiece>=0.1.99
 
 # Development and Testing
 pytest>=7.4.3
 flake8>=6.1.0
 
-# Jupyter Notebooks
-jupyter>=1.0.0
-
 # Utilities
 numpy>=1.26.0
 
-
-# Existing dependencies...
-
-# Knowledge Base - External Sources
-wikipediaapi>=0.6.0                      # Wikipedia loader
-SPARQLWrapper>=2.0.0                     # Wikidata SPARQL queries
-requests>=2.31.0                         # ConceptNet API calls
-
-
-# LLM - Mistral-7B
-transformers>=4.36.0
-accelerate>=0.25.0
-bitsandbytes>=0.41.0  # Pour quantization 4-bit
-sentencepiece>=0.1.99  # Tokenizer
-
-
-# OpenAI API Key
-OPENAI_API_KEY=sk-votre-clé-ici
-
-# Préférences
-NETY_PREFER_LOCAL=true
-NETY_SMART_BACKEND=true

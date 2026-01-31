@@ -3,6 +3,7 @@ from nety.core.brain import Brain
 from nety.core.config import Config
 from nety.core.system_init import initialize_system
 from nety.core.nety_bridge import bridge  # ← NOUVEAU
+from nety.core.model_selector import select_model
 
 
 class BoucleSettings:
@@ -14,11 +15,12 @@ class BoucleSettings:
 class NETYSystem:
     """Système principal NETY"""
 
-    def __init__(self):
+    def __init__(self, model_type=None):
         self.config = Config()
         self.running = False
         self.idle_counter = 0
         self.brain = None
+        self.model_type = model_type
 
     # ======================
     # DÉMARRAGE
@@ -30,8 +32,8 @@ class NETYSystem:
         )
         initialize_system()
         
-        # Initialiser le Brain
-        self.brain = Brain()
+        # Initialiser le Brain avec le modèle choisi
+        self.brain = Brain(model_type=self.model_type)
         
         # Notifier le Bridge
         bridge.set_brain_initialized(True)
@@ -91,21 +93,12 @@ class NETYSystem:
         msg_type = message.get("type", "unknown")
         content = message.get("content", "")
         
-        # 🆕 AJOUTER CES LIGNES POUR DÉBUGGER ET NETTOYER
-        # ================================================
-        # DEBUG : Afficher AVANT nettoyage
-        print(f"🐛 AVANT nettoyage: '{content}'")
-        
         # Nettoyer tous les préfixes possibles
         prefixes_to_remove = ["CHAT: ", "PROMPT: ", "CHAT:", "PROMPT:"]
         for prefix in prefixes_to_remove:
             if content.startswith(prefix):
                 content = content[len(prefix):].strip()
                 break  # Arrêter après le premier match
-        
-        # DEBUG : Afficher APRÈS nettoyage
-        print(f"🐛 APRÈS nettoyage: '{content}'")
-        # ================================================
         
         bridge._add_log(f"📨 Message Dashboard reçu: {msg_type}")
         
@@ -223,11 +216,20 @@ class NETYSystem:
 # ======================
 # POINT D'ENTRÉE
 # ======================
-if __name__ == "__main__":
-    nety = NETYSystem()
-    nety.start()
-
+def main():
+    """Fonction principale - Point d'entrée pour console_scripts"""
+    # Demander à l'utilisateur quel modèle
+    chosen_model = select_model(interactive=True)
+    
+    # Créer le système avec le modèle choisi
+    system = NETYSystem(model_type=chosen_model)
+    system.start()
+    
     try:
-        nety.run()
+        system.run()
     except KeyboardInterrupt:
-        nety.stop()
+        system.stop()
+
+
+if __name__ == "__main__":
+    main()

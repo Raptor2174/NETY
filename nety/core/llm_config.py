@@ -2,23 +2,10 @@ import torch
 import os
 
 class LLMConfig:
-    """Configuration des modèles de langage"""
-    
-    # ✅ NOUVELLE OPTION : Backend intelligent
-    SMART_BACKEND = True  # Active le système hybride
-    PREFER_LOCAL = True   # Préfère le local quand disponible
+    """Configuration des modèles de langage - Uniquement modèles locaux (Mistral et BLOOMZ)"""
     
     # Modèle actuel (local)
     CURRENT_MODEL = "mistral"
-    
-    # ✅ NOUVELLE SECTION : OpenAI
-    OPENAI_CONFIG = {
-        "enabled": True,
-        "api_key": os.getenv("OPENAI_API_KEY", ""),  # À définir dans .env
-        "model": "gpt-3.5-turbo",  # ou "gpt-4" si budget OK
-        "max_tokens": 150,
-        "temperature": 0.7,
-    }
     
     # Configurations disponibles
     MODELS = {
