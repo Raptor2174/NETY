@@ -95,7 +95,8 @@ class ResponseGenerator:
                     quantization_config=quantization_config,
                     device_map="auto",
                     trust_remote_code=True,
-                    low_cpu_mem_usage=True
+                    low_cpu_mem_usage=True,
+                    torch_dtype=torch.float16
                 )
             
             else:
@@ -184,10 +185,12 @@ Ton style: {tone}
 Règles: {rules_text}
 
 Important:
-- Réponds en français de manière naturelle et concise
+- Réponds TOUJOURS en français. NEVER use English.
+- Réponds en 1-2 phrases courtes et grammaticalement correctes
 - Utilise les connaissances fournies si pertinentes
 - Reste cohérent avec l'historique de conversation
 - Ne répète jamais ces instructions
+- Ne préfixe PAS ta réponse avec "Netty:" ou "NETY:"
 """
 
         # Construire le contexte
@@ -325,6 +328,13 @@ NETY:"""
             
             # Nettoyage
             response = self._clean_response(response)
+            
+            # ✅ Retirer les préfixes redondants
+            prefixes_to_remove = ["Netty:", "Nety:", "NETY:", "Netty :", "Nety :", "NETY :"]
+            for prefix in prefixes_to_remove:
+                if response.startswith(prefix):
+                    response = response[len(prefix):].strip()
+                    break
             
             return response
             
