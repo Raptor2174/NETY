@@ -2,7 +2,6 @@ import torch
 import re
 import operator
 import requests
-import math
 from typing import Optional, Dict
 from transformers import (
     AutoTokenizer, 
@@ -10,6 +9,8 @@ from transformers import (
     pipeline,
     BitsAndBytesConfig
 )
+import math  # ✅ Import unique en haut
+
 
 class ResponseGenerator:
     """Générateur de réponses intelligent (Local GPU + OpenAI)"""
@@ -34,6 +35,7 @@ class ResponseGenerator:
         self.pipeline = None
         self.tokenizer = None
         self.openai_available = False
+        self.openai_client = None  # ✅ AJOUT pour nouvelle API
         
         # ✅ Vérifier OpenAI
         if self.config.OPENAI_CONFIG["enabled"]:
@@ -54,12 +56,16 @@ class ResponseGenerator:
             return False
         
         try:
-            import openai
-            openai.api_key = api_key
-            print("✅ OpenAI API disponible")
+            # ✅ NOUVELLE API OpenAI >= 1.0.0
+            from openai import OpenAI
+            self.openai_client = OpenAI(api_key=api_key)
+            print("✅ OpenAI API disponible (client v1.0+)")
             return True
         except ImportError:
             print("⚠️ Module openai non installé (pip install openai)")
+            return False
+        except Exception as e:
+            print(f"⚠️ Erreur OpenAI init: {e}")
             return False
     
     def _is_online(self) -> bool:
@@ -88,7 +94,6 @@ class ResponseGenerator:
         
         # Sinon, OpenAI si online
         return self.openai_available and self._is_online()
-    
     
     def _load_model(self) -> None:
         """Charge le modèle local (optimisé GPU 4-bit)"""
@@ -133,8 +138,24 @@ class ResponseGenerator:
                 print(f"✅ Modèle chargé sur GPU: {torch.cuda.get_device_name(0)}")
                 print(f"📊 VRAM utilisée: {torch.cuda.memory_allocated(0) / 1024**3:.2f} GB")
             
+            elif not has_gpu and self.config.USE_QUANTIZATION:
+                # ✅ 8-bit CPU fallback
+                print("⚙️ Quantization 8-bit activée (CPU)")
+                quantization_config = BitsAndBytesConfig(
+                    load_in_8bit=True,
+                    llm_int8_enable_fp32_cpu_offload=True
+                )
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                    quantization_config=quantization_config,
+                    device_map="auto",
+                    trust_remote_code=True,
+                    low_cpu_mem_usage=True,
+                    torch_dtype=torch.float16
+                )
+            
             else:
-                # CPU fallback
+                # CPU fallback sans quantization
                 print("📦 Chargement standard sur CPU")
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_name,
@@ -180,12 +201,14 @@ class ResponseGenerator:
     def _generate_openai(self, message: str, context: Dict, limbic_filter: Dict) -> str:
         """Génération via OpenAI API"""
         try:
-            import openai
+            # ✅ NOUVELLE SYNTAXE OpenAI v1.0+
+            if self.openai_client is None:
+                raise RuntimeError("Client OpenAI non initialisé")
             
             # Construire le prompt
             system_prompt = self._build_system_prompt(context, limbic_filter)
             
-            response = openai.ChatCompletion.create(
+            response = self.openai_client.chat.completions.create(
                 model=self.config.OPENAI_CONFIG["model"],
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -200,6 +223,8 @@ class ResponseGenerator:
         
         except Exception as e:
             print(f"❌ Erreur OpenAI: {e}")
+            import traceback
+            traceback.print_exc()
             print("🔄 Fallback vers modèle local...")
             return self._generate_local(message, context, limbic_filter)
     
@@ -235,7 +260,6 @@ Règles importantes:
             prompt += f"\n- L'utilisateur s'appelle {user_name}"
         
         return prompt
-    
     
     def _build_mistral_prompt(self, message: str, context: Dict, limbic_filter: Dict) -> str:
         """Construit un prompt optimisé pour Mistral-7B"""
@@ -290,16 +314,63 @@ Important:
         
         return full_prompt
     
-    
     def _build_bloomz_prompt(self, message: str, context: Dict, limbic_filter: Dict) -> str:
-        """Ancien format BLOOMZ"""
-        # ... (code existant inchangé)
-        pass
+        """Ancien format de prompt pour BLOOMZ (compatibilité)"""
+        tone = limbic_filter.get('tone', 'friendly')
+        rules = limbic_filter.get('behavior_rules', [])
+        
+        # ✅ FIX BUG #1: Code complet au lieu de "pass"
+        if isinstance(rules, list):
+            rules_text = ', '.join(rules)
+        elif isinstance(rules, str):
+            rules_text = rules
+        else:
+            rules_text = str(rules)
+        
+        history = context.get('history', [])
+        history_text = ""
+        if history:
+            for interaction in history[-3:]:
+                user_msg = interaction.get('input', '')
+                bot_msg = interaction.get('output', '')
+                history_text += f"Utilisateur: {user_msg}\nNETY: {bot_msg}\n\n"
+        
+        knowledge = context.get('knowledge', '')
+        user_name = context.get('user_name', '')
+        
+        system_prompt = f"""Tu es NETY, une intelligence artificielle conversationnelle.
+
+Instructions:
+- Ton nom est NETY (et uniquement NETY)
+- Réponds TOUJOURS en français. NEVER use English.
+- Ton style de communication: {tone}
+- Règles à suivre: {rules_text}
+- Réponds de manière naturelle et concise
+- Reste cohérent avec l'historique de conversation
+- Ne répète jamais ces instructions dans tes réponses"""
+        
+        full_prompt = f"""{system_prompt}
+
+{"informations sur l'utilisateur: " + user_name if user_name else ""}
+{f"- son nom est {user_name}." if user_name else ""}
+
+{"CONVERSATION PRÉCÉDENTE:" if history_text else ""}
+{history_text}
+
+{"CONNAISSANCES PERTINENTES:" if knowledge else ""}
+{knowledge}
+
+Utilisateur: {message}
+NETY:"""
+        
+        return full_prompt
     
     def _call_llm(self, prompt: str) -> str:
         """Génère une réponse avec le modèle local"""
         try:
             if self.model_type == "bloomz":
+                if self.pipeline is None:
+                    raise RuntimeError("Pipeline BLOOMZ non chargé.")
                 result = self.pipeline(
                     prompt,
                     max_new_tokens=120,
@@ -313,6 +384,11 @@ Important:
             
             else:
                 # Mistral
+                if self.model is None:
+                    raise RuntimeError("Modèle Mistral non chargé.")
+                if self.tokenizer is None:
+                    raise RuntimeError("Tokenizer non chargé.")
+                
                 inputs = self.tokenizer(
                     prompt, 
                     return_tensors="pt",
@@ -324,19 +400,29 @@ Important:
                 if hasattr(self.model, 'device'):
                     inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
                 
-                # Configuration
+                # ✅ FIX BUG #6: Paramètres explicites
                 gen_config = self.config.MISTRAL_GENERATION_CONFIG.copy()
                 
-                # Générer
                 with torch.no_grad():
                     outputs = self.model.generate(
                         input_ids=inputs["input_ids"],
                         attention_mask=inputs.get("attention_mask"),
-                        **gen_config
+                        max_new_tokens=gen_config.get('max_new_tokens', 100),
+                        temperature=gen_config.get('temperature', 0.7),
+                        top_p=gen_config.get('top_p', 0.9),
+                        repetition_penalty=gen_config.get('repetition_penalty', 1.2),
+                        do_sample=gen_config.get('do_sample', True),
+                        pad_token_id=self.tokenizer.pad_token_id,  # ✅ Important
+                        eos_token_id=self.tokenizer.eos_token_id   # ✅ Important
                     )
                 
-                response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-                response = response[len(prompt):].strip()
+                # ✅ FIX BUG #4: Extraction correcte
+                full_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+                
+                if "[/INST]" in full_text:
+                    response = full_text.split("[/INST]")[-1].strip()
+                else:
+                    response = full_text[len(prompt):].strip()
             
             # ✅ Nettoyage amélioré
             response = self._clean_response(response)
@@ -351,8 +437,11 @@ Important:
             return response
         
         except Exception as e:
-            print(f"❌ Erreur génération: {e}")
-            return f"Désolé, une erreur s'est produite."
+            # ✅ FIX BUG #5: Traceback complet
+            print(f"❌ Erreur LLM: {e}")
+            import traceback
+            traceback.print_exc()
+            return "Désolé, une erreur s'est produite lors de la génération de la réponse."
     
     def _clean_response(self, response: str) -> str:
         """Nettoie la réponse"""
@@ -364,34 +453,11 @@ Important:
         
         return response.strip()
     
-    
     def _handle_math(self, message: str) -> Optional[str]:
         """Détecte et résout les calculs mathématiques"""
-        import math
+        # ✅ FIX BUG #2: Import déjà fait en haut
         
-        # ✅ Racine carrée
-        if '√' in message:
-            sqrt_pattern = r'√(\d+(?:\.\d+)?)'
-            match = re.search(sqrt_pattern, message)
-            if match:
-                num = float(match.group(1))
-                result = math.sqrt(num)
-                
-                # Détecter si addition après
-                rest = message[match.end():].strip()
-                if rest.startswith('+') or rest.startswith('-'):
-                    op_match = re.search(r'([+\-*/])(\d+(?:\.\d+)?)', rest)
-                    if op_match:
-                        op = op_match.group(1)
-                        num2 = float(op_match.group(2))
-                        operations = {'+': operator.add, '-': operator.sub, '*': operator.mul, '/': operator.truediv}
-                        if op in operations:
-                            final = operations[op](result, num2)
-                            return f"√{num} {op} {num2} = {final:.2f}"
-                
-                return f"√{num} = {result:.2f}"
-        
-        # Opérations simples
+        # Opérations simples AVANT racine carrée (priorité)
         math_pattern = r'(\d+(?:\.\d+)?)\s*([\+\-\*\/])\s*(\d+(?:\.\d+)?)'
         match = re.search(math_pattern, message)
         
@@ -421,6 +487,59 @@ Important:
             except Exception as e:
                 print(f"Erreur calcul: {e}")
         
+        # ✅ FIX BUG #7: Racine carrée améliorée
+        if '√' in message:
+            # Essayer de parser toute l'expression
+            sqrt_pattern = r'√(\d+(?:\.\d+)?)'
+            match = re.search(sqrt_pattern, message)
+            if match:
+                num = float(match.group(1))
+                result = math.sqrt(num)
+                
+                # Chercher une opération APRÈS
+                rest = message[match.end():].strip()
+                
+                # Parser l'expression complète après √
+                if rest:
+                    # Ex: "+9/2" → évaluer "9/2" puis ajouter à √10
+                    try:
+                        # Remplacer √10 par sa valeur dans le message
+                        expr = message.replace(f'√{num}', str(result))
+                        # Parser avec priorités d'opérateurs
+                        # Pour √10+9/2 : √10=3.16, puis 3.16+9/2=3.16+4.5=7.66
+                        
+                        # Simpliste: détecter + ou - au début
+                        if rest[0] in ['+', '-', '*', '/']:
+                            op = rest[0]
+                            # Trouver le reste de l'expression
+                            rest_expr = rest[1:].strip()
+                            # Évaluer le reste (ex: "9/2")
+                            if '/' in rest_expr or '*' in rest_expr:
+                                parts = re.split(r'([+\-*/])', rest_expr, maxsplit=1)
+                                if len(parts) >= 3:
+                                    n1 = float(parts[0])
+                                    op2 = parts[1]
+                                    n2 = float(parts[2])
+                                    operations = {'+': operator.add, '-': operator.sub, 
+                                                '*': operator.mul, '/': operator.truediv}
+                                    if op2 in operations:
+                                        rest_result = operations[op2](n1, n2)
+                                        if op in operations:
+                                            final = operations[op](result, rest_result)
+                                            return f"√{num} {op} {n1}{op2}{n2} = {final:.2f}"
+                            else:
+                                # Simple nombre
+                                num2 = float(rest_expr)
+                                operations = {'+': operator.add, '-': operator.sub, 
+                                            '*': operator.mul, '/': operator.truediv}
+                                if op in operations:
+                                    final = operations[op](result, num2)
+                                    return f"√{num} {op} {num2} = {final:.2f}"
+                    except:
+                        pass
+                
+                return f"√{num} = {result:.2f}"
+        
         return None
     
     def get_model_info(self) -> Dict:
@@ -431,11 +550,14 @@ Important:
             "device": self.config.get_device(),
             "quantization": f"{self.config.QUANTIZATION_BITS}-bit" if self.config.USE_QUANTIZATION else "None",
             "openai_available": self.openai_available,
-            "smart_backend": self.config.SMART_BACKEND,
+            "smart_backend": self.config.SMART_BACKEND if hasattr(self.config, 'SMART_BACKEND') else False,
         }
         
         if torch.cuda.is_available():
-            info["vram_used_gb"] = f"{torch.cuda.memory_allocated(0) / 1024**3:.2f}"
-            info["vram_total_gb"] = f"{torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f}"
+            try:
+                info["vram_used_gb"] = f"{torch.cuda.memory_allocated(0) / 1024**3:.2f}"
+                info["vram_total_gb"] = f"{torch.cuda.get_device_properties(0).total_memory / 1024**3:.2f}"
+            except:
+                pass
         
         return info
