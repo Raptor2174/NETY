@@ -104,7 +104,6 @@ class IntentAnalyzer:
         # Au moins 2 lettres majuscules consécutives
         proper_nouns = re.findall(r'\b[A-Z][A-Z]+\b', message)
         for noun in proper_nouns:
-            if len(noun) > 1:  # Éviter les initiales seules
-                entities.append({"type": "PROPER_NOUN", "value": noun})
+            entities.append({"type": "PROPER_NOUN", "value": noun})
         
         return entities
