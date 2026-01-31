@@ -83,5 +83,8 @@ tmp/
 tmp_to_nety.txt
 tmp_from_dashboard.txt
 
+# Environment variables
+.env
+
 # les modeles téléchargés
 models/

@@ -91,21 +91,12 @@ class NETYSystem:
         msg_type = message.get("type", "unknown")
         content = message.get("content", "")
         
-        # 🆕 AJOUTER CES LIGNES POUR DÉBUGGER ET NETTOYER
-        # ================================================
-        # DEBUG : Afficher AVANT nettoyage
-        print(f"🐛 AVANT nettoyage: '{content}'")
-        
         # Nettoyer tous les préfixes possibles
         prefixes_to_remove = ["CHAT: ", "PROMPT: ", "CHAT:", "PROMPT:"]
         for prefix in prefixes_to_remove:
             if content.startswith(prefix):
                 content = content[len(prefix):].strip()
                 break  # Arrêter après le premier match
-        
-        # DEBUG : Afficher APRÈS nettoyage
-        print(f"🐛 APRÈS nettoyage: '{content}'")
-        # ================================================
         
         bridge._add_log(f"📨 Message Dashboard reçu: {msg_type}")
         

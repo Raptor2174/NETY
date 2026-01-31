@@ -1,7 +1,6 @@
 """
 Tokenizer simple pour le prétraitement de texte
 """
-from email.mime import text
 import torch
 from typing import List, Dict
 import json
