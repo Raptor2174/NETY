@@ -70,11 +70,41 @@ class IntentAnalyzer:
     
     def _extract_entities(self, message: str) -> list:
         """
-        Extrait les entités du message (version simplifiée)
+        Extrait les entités du message (version simplifiée sans spaCy)
+        Détecte: nombres, dates, emails, URLs, noms propres potentiels
         
         Returns:
-            Liste d'entités détectées
+            Liste d'entités détectées avec leur type
         """
-        # Pour l'instant, retourne une liste vide
-        # TODO: Implémenter extraction d'entités avec spaCy
-        return []
+        import re
+        
+        entities = []
+        
+        # Détection de nombres
+        numbers = re.findall(r'\b\d+(?:\.\d+)?\b', message)
+        for num in numbers:
+            entities.append({"type": "NUMBER", "value": num})
+        
+        # Détection d'emails
+        emails = re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', message)
+        for email in emails:
+            entities.append({"type": "EMAIL", "value": email})
+        
+        # Détection d'URLs
+        urls = re.findall(r'https?://[^\s]+', message)
+        for url in urls:
+            entities.append({"type": "URL", "value": url})
+        
+        # Détection de dates simples (format JJ/MM/AAAA ou JJ-MM-AAAA)
+        dates = re.findall(r'\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b', message)
+        for date in dates:
+            entities.append({"type": "DATE", "value": date})
+        
+        # Détection de mots en majuscules (potentiels noms propres/acronymes)
+        # Au moins 2 lettres majuscules consécutives
+        proper_nouns = re.findall(r'\b[A-Z][A-Z]+\b', message)
+        for noun in proper_nouns:
+            if len(noun) > 1:  # Éviter les initiales seules
+                entities.append({"type": "PROPER_NOUN", "value": noun})
+        
+        return entities
