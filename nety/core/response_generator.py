@@ -4,7 +4,12 @@ Mistral (local) + BLOOMZ (local) + Groq (cloud)
 """
 import torch
 import requests
+import os
+from dotenv import load_dotenv
 from typing import Optional, Dict
+
+# ✅ CHARGER .env IMMÉDIATEMENT (avant tout import de config)
+load_dotenv()
 
 class ResponseGenerator:
     """Générateur de réponses intelligent - Multi-backend"""
@@ -17,8 +22,8 @@ class ResponseGenerator:
             model_type: "mistral", "bloomz", "groq"
             force_backend: Force un backend spécifique
         """
-        from .llm_config import LLMConfig
         
+        from .llm_config import LLMConfig
         self.config = LLMConfig()
         self.force_backend = force_backend
         self.model_type = model_type or "groq"  # Par défaut: groq
