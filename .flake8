@@ -2,13 +2,17 @@
 exclude =
     .git,
     __pycache__,
-    build,
-    dist,
-    *.egg-info,
     .venv,
     venv,
     env,
+    ENV,
     .eggs,
-    .tox
+    *.egg-info,
+    build,
+    dist,
+    .tox,
+    .pytest_cache,
+    .mypy_cache,
+    node_modules
 max-line-length = 127
 max-complexity = 10
