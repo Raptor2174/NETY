@@ -192,11 +192,21 @@ class ResponseGenerator:
         use_openai = self._should_use_openai()
         
         if use_openai:
-            print("🌐 Utilisation: OpenAI API")
+            # Handle OpenAI generation
             return self._generate_openai(message, context, limbic_filter)
         else:
-            print("🖥️ Utilisation: Mistral Local GPU")
-            return self._generate_local(message, context, limbic_filter)
+            # Ensure model is loaded and callable
+            if self.model is None:
+                raise ValueError("Model is not loaded. Please check the model initialization.")
+            
+            # Generate response using the local model
+            inputs = self.tokenizer(message, return_tensors="pt")
+            outputs = self.model.generate(
+                input_ids=inputs["input_ids"],
+                attention_mask=inputs.get("attention_mask"),
+            )
+            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            return response
     
     def _generate_openai(self, message: str, context: Dict, limbic_filter: Dict) -> str:
         """Génération via OpenAI API"""
