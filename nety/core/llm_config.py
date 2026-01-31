@@ -19,14 +19,14 @@ class LLMConfig:
         
         # Modèles disponibles (gratuits)
         "models": {
-            "llama-3.2-1b-preview": {
+            "llama-3.3-70b-versatile": {
                 "context_window": 128000,
                 "max_tokens": 150,
                 "speed": "ultra",  # ~500 tok/sec
                 "quality": 3,
                 "description": "Léger et rapide"
             },
-            "llama-3.2-3b-preview": {
+            "llama-3.3-70b-versatile": {
                 "context_window": 128000,
                 "max_tokens": 150,
                 "speed": "ultra",
