@@ -32,6 +32,11 @@ class ResponseGenerator:
         self.pipeline = None
         self.tokenizer = None
         
+        # ✅ Groq Cloud
+        self.groq_client = None
+        self.groq_available = False
+        self._check_groq()
+        
         # ✅ Charger le modèle local
         print(f"🤖 Chargement du modèle {self.model_config['name']}...")
         print(f"📍 Device: {self.config.get_device()}")
@@ -103,6 +108,24 @@ class ResponseGenerator:
                 device=0 if has_gpu else -1
             )
             self.model = self.pipeline.model
+    
+    def _check_groq(self) -> bool:
+        """Vérifie si Groq est disponible"""
+        if not self.config.is_groq_available():
+            return False
+        
+        try:
+            from groq import Groq
+            self.groq_client = Groq(api_key=self.config.GROQ_CONFIG["api_key"])
+            self.groq_available = True
+            print("✅ Groq Cloud API disponible")
+            return True
+        except ImportError:
+            print("⚠️ Groq non installé (pip install groq)")
+            return False
+        except Exception as e:
+            print(f"⚠️ Erreur Groq: {e}")
+            return False
     
     def generate(self, message: str, context: Optional[Dict] = None, 
                  limbic_filter: Optional[Dict] = None) -> str:
@@ -277,7 +300,7 @@ NETY:"""
                 gen_config = self.config.MISTRAL_GENERATION_CONFIG.copy()
                 
                 with torch.no_grad():
-                    outputs = self.model.generate(
+                    outputs = self.model.generate(  # type: ignore
                         input_ids=inputs["input_ids"],
                         attention_mask=inputs.get("attention_mask"),
                         max_new_tokens=gen_config.get('max_new_tokens', 100),
@@ -286,7 +309,7 @@ NETY:"""
                         repetition_penalty=gen_config.get('repetition_penalty', 1.2),
                         do_sample=gen_config.get('do_sample', True),
                         pad_token_id=self.tokenizer.pad_token_id,  # ✅ Important
-                        eos_token_id=self.tokenizer.eos_token_id   # ✅ Important
+                        eos_token_id=self.tokenizer.eos_token_id,   # ✅ Important
                     )
                 
                 # ✅ FIX BUG #4: Extraction correcte
@@ -315,6 +338,37 @@ NETY:"""
             import traceback
             traceback.print_exc()
             return "Désolé, une erreur s'est produite lors de la génération de la réponse."
+    
+    def _call_groq(self, prompt: str) -> str:
+        """Génère une réponse avec Groq Cloud"""
+        if not self.groq_client:
+            raise RuntimeError("Client Groq non initialisé")
+        
+        model = self.config.GROQ_CONFIG["default_model"]
+        
+        try:
+            response = self.groq_client.chat.completions.create(
+                model=model,
+                messages=[
+                    {
+                        "role": "system", 
+                        "content": "Tu es NETY, un assistant IA amical et intelligent créé par Raptor. Tu réponds en français de manière concise et utile."
+                    },
+                    {
+                        "role": "user", 
+                        "content": prompt
+                    }
+                ],
+                max_tokens=self.config.GROQ_CONFIG["models"][model]["max_tokens"],
+                temperature=self.config.GROQ_CONFIG["temperature"]
+            )
+            
+            content = response.choices[0].message.content
+            return content.strip() if content else "Désolé, je n'ai pas reçu de réponse valide de Groq."
+        
+        except Exception as e:
+            print(f"❌ Erreur Groq: {e}")
+            return "Désolé, je ne peux pas répondre pour le moment (erreur Groq Cloud)."
     
     def _clean_response(self, response: str) -> str:
         """Nettoie la réponse"""
