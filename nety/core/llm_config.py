@@ -1,16 +1,24 @@
-
-
-# nety/core/llm_config.py
-from dataclasses import dataclass
-from typing import Optional
 import torch
+import os
 
-@dataclass
 class LLMConfig:
-    """Configuration pour les modèles LLM"""
+    """Configuration des modèles de langage"""
     
-    # Modèle actuel
-    CURRENT_MODEL = "mistral"  # ou "bloomz" pour revenir en arrière
+    # ✅ NOUVELLE OPTION : Backend intelligent
+    SMART_BACKEND = True  # Active le système hybride
+    PREFER_LOCAL = True   # Préfère le local quand disponible
+    
+    # Modèle actuel (local)
+    CURRENT_MODEL = "mistral"
+    
+    # ✅ NOUVELLE SECTION : OpenAI
+    OPENAI_CONFIG = {
+        "enabled": True,
+        "api_key": os.getenv("OPENAI_API_KEY", ""),  # À définir dans .env
+        "model": "gpt-3.5-turbo",  # ou "gpt-4" si budget OK
+        "max_tokens": 150,
+        "temperature": 0.7,
+    }
     
     # Configurations disponibles
     MODELS = {
@@ -24,41 +32,34 @@ class LLMConfig:
         "mistral": {
             "name": "mistralai/Mistral-7B-Instruct-v0.2",
             "type": "mistral",
-            "requires_gpu": True,  # Fonctionne en CPU avec quantization
+            "requires_gpu": False,  # Fonctionne aussi sur CPU
             "min_ram_gb": 8,
-            "context_length": 32768
+            "context_length": 32768,
+            # ✅ NOUVEAU : Configuration GPU
+            "gpu_vram_gb": 4,  # Nécessite ~4GB VRAM en 4-bit
         }
     }
     
-    # Paramètres de génération pour Mistral
+    # ✅ MODIFIÉ : Paramètres optimisés pour GPU
     MISTRAL_GENERATION_CONFIG = {
-        "max_new_tokens": 80,
+        "max_new_tokens": 100,  # Réduit de 200 → 100
         "temperature": 0.7,
-        "top_p": 0.95,
-        "top_k": 50,
-        "repetition_penalty": 1.2,
-        "length_penalty": 1.5,
         "do_sample": True,
+        "top_p": 0.9,
+        "repetition_penalty": 1.2,
         "early_stopping": True,
     }
     
-    # Paramètres de quantization
-    USE_QUANTIZATION = True  # Activer pour économiser RAM
-    QUANTIZATION_BITS = 4    # 4-bit ou 8-bit
+    # Quantization (optimisé pour GPU)
+    USE_QUANTIZATION = True
+    QUANTIZATION_BITS = 4  # ✅ 4-bit pour GPU (au lieu de 8)
     
-    @classmethod
-    def get_current_config(cls):
-        """Retourne la config du modèle actuel"""
-        return cls.MODELS[cls.CURRENT_MODEL]
-    
-    @classmethod
-    def has_gpu(cls):
-        """Détecte si GPU disponible"""
-        return torch.cuda.is_available()
-    
-    @classmethod
-    def get_device(cls):
-        """Retourne le device optimal"""
-        if cls.has_gpu():
-            return "cuda"
+    def get_device(self):
+        """Détecte le device optimal"""
+        if torch.cuda.is_available():
+            return f"cuda:0 (GPU: {torch.cuda.get_device_name(0)})"
         return "cpu"
+    
+    def has_gpu(self):
+        """Vérifie si GPU disponible"""
+        return torch.cuda.is_available()

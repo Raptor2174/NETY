@@ -53,3 +53,11 @@ transformers>=4.36.0
 accelerate>=0.25.0
 bitsandbytes>=0.41.0  # Pour quantization 4-bit
 sentencepiece>=0.1.99  # Tokenizer
+
+
+# OpenAI API Key
+OPENAI_API_KEY=sk-votre-clé-ici
+
+# Préférences
+NETY_PREFER_LOCAL=true
+NETY_SMART_BACKEND=true
