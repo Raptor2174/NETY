@@ -4,18 +4,19 @@ Lance le système IA et le Dashboard en parallèle avec communication via Bridge
 """
 
 from nety.main import NETYSystem
+from nety.core.model_selector import ModelSelector
 from app.main import launch_app
 import threading
 import time
 import sys
 
 
-def start_nety_system():
+def start_nety_system(model_type=None):
     """Démarre le système IA NETY dans un thread dédié"""
     print("🚀 Démarrage du système IA NETY...")
     
     try:
-        nety = NETYSystem()
+        nety = NETYSystem(model_type=model_type)
         nety.start()
         
         try:
@@ -58,9 +59,16 @@ if __name__ == "__main__":
     print("=" * 60)
     print()
     
+    # Étape 1: Demander le modèle à l'utilisateur
+    selector = ModelSelector()
+    model_type = selector.get_user_choice()
+    print(f"✅ Modèle sélectionné: {model_type}")
+    print()
+    
     # Thread 1: Système IA NETY (Brain + ML Engine)
     nety_thread = threading.Thread(
         target=start_nety_system,
+        args=(model_type,),
         name="NETY-AI-Thread",
         daemon=True
     )
