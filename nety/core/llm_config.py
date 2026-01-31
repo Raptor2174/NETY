@@ -17,39 +17,39 @@ class LLMConfig:
         "api_key": os.getenv("GROQ_API_KEY", ""),
         "base_url": "https://api.groq.com/openai/v1",
         
-        # Modèles disponibles (gratuits)
+        # Modèles disponibles (gratuits) - Mis à jour 2026
         "models": {
             "llama-3.3-70b-versatile": {
                 "context_window": 128000,
                 "max_tokens": 150,
                 "speed": "ultra",  # ~500 tok/sec
-                "quality": 3,
-                "description": "Léger et rapide"
-            },
-            "llama-3.3-70b-versatile": {
-                "context_window": 128000,
-                "max_tokens": 150,
-                "speed": "ultra",
-                "quality": 4,
-                "description": "⭐ Optimal - Meilleur rapport qualité/vitesse"
+                "quality": 5,
+                "description": "⭐ RECOMMANDÉ - Meilleur modèle Groq (Jan 2026)"
             },
             "llama-3.1-8b-instant": {
                 "context_window": 128000,
                 "max_tokens": 150,
-                "speed": "fast",
-                "quality": 5,
-                "description": "Plus intelligent"
+                "speed": "ultra-fast",
+                "quality": 4,
+                "description": "Très rapide et léger"
             },
             "mixtral-8x7b-32768": {
                 "context_window": 32768,
                 "max_tokens": 150,
-                "speed": "medium",
+                "speed": "fast",
                 "quality": 5,
-                "description": "Très puissant (47B params)"
+                "description": "Excellent pour le français (47B params)"
+            },
+            "gemma2-9b-it": {
+                "context_window": 8192,
+                "max_tokens": 150,
+                "speed": "fast",
+                "quality": 4,
+                "description": "Efficace et rapide (Google)"
             },
         },
         
-        "default_model": "llama-3.2-3b-preview",  # ⭐ RECOMMANDÉ
+        "default_model": "llama-3.3-70b-versatile",  # ✅ CORRIGÉ
         "temperature": 0.7,
         
         # Limites gratuites
