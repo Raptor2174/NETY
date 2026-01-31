@@ -24,7 +24,7 @@ wikipediaapi>=0.6.0
 SPARQLWrapper>=2.0.0
 requests>=2.31.0
 
-# LLM - Mistral-7B
+# LLM - Mistral-7B (si vous avai +16GO de RAM GPU)
 transformers>=4.36.0
 accelerate>=0.25.0
 bitsandbytes>=0.41.0
