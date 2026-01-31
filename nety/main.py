@@ -216,7 +216,8 @@ class NETYSystem:
 # ======================
 # POINT D'ENTRÉE
 # ======================
-if __name__ == "__main__":
+def main():
+    """Fonction principale - Point d'entrée pour console_scripts"""
     # Demander à l'utilisateur quel modèle
     chosen_model = select_model(interactive=True)
     
@@ -228,3 +229,7 @@ if __name__ == "__main__":
         system.run()
     except KeyboardInterrupt:
         system.stop()
+
+
+if __name__ == "__main__":
+    main()
