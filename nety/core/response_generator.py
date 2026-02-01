@@ -169,6 +169,9 @@ class ResponseGenerator:
         
         # Construire le prompt
         if self.model_type == "rnn":
+            # ✨ AJOUTER le message au contexte
+            context["current_message"] = message
+            context["limbic_filter"] = limbic_filter
             print("🧠 Utilisation du RNN local...")
             if self.rnn_generator is None:
                 raise RuntimeError("Générateur RNN non initialisé")
