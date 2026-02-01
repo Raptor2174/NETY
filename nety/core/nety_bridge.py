@@ -19,7 +19,9 @@ class NetyBridge:
     _lock = threading.Lock()
     
     # Configuration des logs
-    MAX_LOGS = 5000  # Capacité maximale des logs (augmentée de 1000 à 5000)
+    # Par défaut, aucune rotation pour éviter toute coupure de logs.
+    ENABLE_LOGS_ROTATION = False
+    MAX_LOGS = 5000  # Capacité maximale utilisée seulement si rotation activée
     LOGS_ROTATION_THRESHOLD = 0.9  # Rotation à 90% de capacité
     
     def __new__(cls):
@@ -80,7 +82,7 @@ class NetyBridge:
             }
             self.to_nety_queue.put(payload)
             self.messages_sent += 1
-            self._add_log(f"📤 [Dashboard→IA] {msg_type.upper()}: {message[:50]}...")
+            self._add_log(f"📤 [Dashboard→IA] {msg_type.upper()}: {message}")
             return True
         except Exception as e:
             self._add_log(f"❌ Erreur envoi Dashboard→IA: {e}")
@@ -124,7 +126,7 @@ class NetyBridge:
             }
             self.from_nety_queue.put(payload)
             self.messages_received += 1
-            self._add_log(f"📥 [IA→Dashboard] {msg_type.upper()}: {message[:50]}...")
+            self._add_log(f"📥 [IA→Dashboard] {msg_type.upper()}: {message}")
             return True
         except Exception as e:
             self._add_log(f"❌ Erreur envoi IA→Dashboard: {e}")
@@ -161,15 +163,16 @@ class NetyBridge:
             log_entry = f"[{timestamp}] {message}"
             self.logs.append(log_entry)
             
-            # Gestion intelligente de la capacité
-            current_capacity_ratio = len(self.logs) / self.MAX_LOGS
-            if current_capacity_ratio >= self.LOGS_ROTATION_THRESHOLD:
-                # Garder les 75% les plus récents (supprimer les 25% les plus anciens)
-                remove_count = len(self.logs) // 4
-                self.logs = self.logs[remove_count:]
-                self.logs_rotation_count += 1
-                rotation_msg = f"[{timestamp}] 🔄 Rotation logs #{self.logs_rotation_count} (gardé {len(self.logs)}/{self.MAX_LOGS})"
-                self.logs.append(rotation_msg)
+            # Gestion intelligente de la capacité (optionnelle)
+            if self.ENABLE_LOGS_ROTATION and self.MAX_LOGS and self.MAX_LOGS > 0:
+                current_capacity_ratio = len(self.logs) / self.MAX_LOGS
+                if current_capacity_ratio >= self.LOGS_ROTATION_THRESHOLD:
+                    # Garder les 75% les plus récents (supprimer les 25% les plus anciens)
+                    remove_count = len(self.logs) // 4
+                    self.logs = self.logs[remove_count:]
+                    self.logs_rotation_count += 1
+                    rotation_msg = f"[{timestamp}] 🔄 Rotation logs #{self.logs_rotation_count} (gardé {len(self.logs)}/{self.MAX_LOGS})"
+                    self.logs.append(rotation_msg)
             
             # Aussi afficher dans la console
             print(log_entry)
@@ -195,10 +198,15 @@ class NetyBridge:
         Utile pour monitorer la santé du système de logs
         """
         with self.logs_lock:
+            max_capacity = self.MAX_LOGS if self.ENABLE_LOGS_ROTATION else None
+            capacity_used_percent = None
+            if max_capacity and max_capacity > 0:
+                capacity_used_percent = (len(self.logs) / max_capacity) * 100
             return {
                 "total_logs": len(self.logs),
-                "max_capacity": self.MAX_LOGS,
-                "capacity_used_percent": (len(self.logs) / self.MAX_LOGS) * 100,
+                "max_capacity": max_capacity,
+                "capacity_used_percent": capacity_used_percent,
+                "rotation_enabled": self.ENABLE_LOGS_ROTATION,
                 "rotation_count": self.logs_rotation_count,
                 "first_log": self.logs[0] if self.logs else None,
                 "last_log": self.logs[-1] if self.logs else None
