@@ -54,7 +54,7 @@ htmlcov/
 *.pb
 data/models/
 data/raw/
-data/processed/
+# data/processed/ (desactivé temporairement pour le dev)
 
 # Databases (local development)
 data/databases/
