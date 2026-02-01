@@ -1,11 +1,11 @@
 """
 Sélecteur de modèle interactif pour NETY
-Mistral (local GPU) + BLOOMZ (local CPU) + Groq (cloud gratuit)
+BLOOMZ (local CPU) + Groq (cloud gratuit) + RNN (local)
 """
 import os
 from typing import Literal
 
-ModelChoice = Literal["mistral", "bloomz", "groq", "rnn"]
+ModelChoice = Literal["bloomz", "groq", "rnn"]
 
 class ModelSelector:
     """Gestionnaire de sélection de modèle"""
@@ -13,18 +13,6 @@ class ModelSelector:
     def __init__(self):
         self.available_models = {
             "1": {
-                "name": "mistral",
-                "display": "Mistral-7B (Local GPU - Puissant mais gourmand)",
-                "backend": "local",
-                "requires_gpu": True,
-                "ram_gb": 8,
-                "vram_gb": 4,
-                "cost": "💰 Gratuit (utilise ton matériel)",
-                "internet": "📶 Non requis",
-                "speed": "⚡ Moyen (dépend GPU)",
-                "quality": "🧠 Excellent",
-            },
-            "2": {
                 "name": "bloomz",
                 "display": "BLOOMZ-560M (Local CPU - Léger et rapide)",
                 "backend": "local",
@@ -36,9 +24,9 @@ class ModelSelector:
                 "speed": "⚡ Rapide (CPU uniquement)",
                 "quality": "🧠 Correct",
             },
-            "3": {
+            "2": {
                 "name": "groq",
-                "display": "Groq Cloud - Llama 3.2 (Cloud ultra rapide)",
+                "display": "Groq Cloud - Llama 3.3 (Cloud ultra rapide)",
                 "backend": "cloud",
                 "requires_gpu": False,
                 "ram_gb": 0,
@@ -48,7 +36,7 @@ class ModelSelector:
                 "speed": "⚡⚡⚡ Ultra rapide (500 tok/sec)",
                 "quality": "🧠 Excellent",
             },
-            "4": {
+            "3": {
                 "name": "rnn",
                 "display": "RNN Local - TextualCortex (Expérimental)",
                 "backend": "local",
@@ -92,10 +80,9 @@ class ModelSelector:
             print()
         
         print("💡 Recommandations:")
-        print("   • Pas de GPU → BLOOMZ (option 2)")
-        print("   • GPU disponible → Mistral (option 1)")
-        print("   • PC faible + internet → Groq (option 3)")
-        print("   • Tester le RNN local → RNN (option 4) 🧪")
+        print("   • Recommandé → Groq (ultra rapide + gratuit)")
+        print("   • Offline local → BLOOMZ (léger + gratuit)")
+        print("   • Tester le RNN local → RNN (option 3) 🧪")
         print()
     
     def get_user_choice(self) -> ModelChoice:
@@ -103,7 +90,7 @@ class ModelSelector:
         self.display_menu()
         
         while True:
-            choice = input("👉 Choisis ton modèle (1, 2, 3 ou 4): ").strip()
+            choice = input("👉 Choisis ton modèle (1, 2 ou 3): ").strip()
             
             if choice in self.available_models:
                 selected = self.available_models[choice]
@@ -158,30 +145,19 @@ class ModelSelector:
                     print("\n🌐 Vérification de la connexion internet...")
                     if not self._check_internet():
                         print("❌ Pas de connexion internet détectée!")
-                        print("💡 Groq nécessite internet. Choisis Mistral ou BLOOMZ.")
+                        print("💡 Groq nécessite internet. Choisis BLOOMZ ou RNN.")
                         continue
                     
                     print("✅ Connexion internet OK")
                     print(f"✅ Groq API configuré")
                     print()
                     print("📊 Informations Groq:")
-                    print(f"   • Modèle: llama-3.2-3b-preview")
+                    print(f"   • Modèle: llama-3.3-70b-versatile")
                     print(f"   • Vitesse: ~500 tokens/seconde")
                     print(f"   • Limite: 14 400 requêtes/jour")
                     print(f"   • Coût: 0€ (gratuit)")
                     print()
                 
-                elif selected["name"] == "mistral":
-                    # Vérifier le GPU
-                    import torch
-                    if not torch.cuda.is_available():
-                        print("\n⚠️ ATTENTION: Aucun GPU CUDA détecté!")
-                        print("   Mistral-7B va tourner sur CPU (très lent)")
-                        print()
-                        confirm = input("Continuer quand même ? (o/n): ").strip().lower()
-                        if confirm != 'o':
-                            print("💡 Choisis BLOOMZ (option 2) pour CPU")
-                            continue
                 elif selected["name"] == "rnn":
                     print("\n🧪 Mode RNN local expérimental activé")
                     print("   Qualité variable - destiné aux tests et observations")
@@ -212,11 +188,6 @@ class ModelSelector:
             if api_key and self._check_internet():
                 print("🤖 Auto-sélection: Groq Cloud (API key détectée)")
                 return "groq"
-        
-        # Si GPU disponible → Mistral
-        if torch.cuda.is_available():
-            print("🤖 Auto-sélection: Mistral-7B (GPU détecté)")
-            return "mistral"
         
         # Sinon BLOOMZ (léger pour CPU)
         print("🤖 Auto-sélection: BLOOMZ (CPU uniquement)")

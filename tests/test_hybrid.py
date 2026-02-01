@@ -8,7 +8,7 @@ def test_hybrid():
     print("=" * 70)
     
     # Créer le générateur
-    gen = ResponseGenerator(model_type="mistral")
+    gen = ResponseGenerator(model_type="bloomz")
     
     # Afficher infos
     info = gen.get_model_info()

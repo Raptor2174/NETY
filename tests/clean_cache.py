@@ -71,12 +71,7 @@ def main():
             }
             
             # Stratégie de nettoyage
-            if "mistral" in model_name.lower():
-                if not is_complete:
-                    models_to_delete.append(model_info)
-                else:
-                    models_to_keep.append(model_info)
-            elif not is_complete:
+            if not is_complete:
                 models_to_delete.append(model_info)
             else:
                 models_to_keep.append(model_info)

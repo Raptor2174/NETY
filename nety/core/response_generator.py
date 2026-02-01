@@ -1,6 +1,6 @@
 """
 Générateur de réponses multi-backend
-Mistral (local) + BLOOMZ (local) + Groq (cloud)
+BLOOMZ (local) + Groq (cloud) + RNN (local)
 """
 import torch
 import requests
@@ -20,7 +20,7 @@ class ResponseGenerator:
         Initialise le générateur
         
         Args:
-            model_type: "mistral", "bloomz", "groq", "rnn"
+            model_type: "bloomz", "groq", "rnn"
             force_backend: Force un backend spécifique
         """
         
@@ -62,7 +62,7 @@ class ResponseGenerator:
                 raise RuntimeError("Impossible d'initialiser Groq. Vérifie ta clé API.")
             print("✅ Groq Cloud prêt!")
         
-        elif self.model_type in ["mistral", "bloomz"]:
+        elif self.model_type == "bloomz":
             # Backend local Transformers
             print(f"💻 Chargement du modèle local {self.model_type}...")
             self.model_config = self.config.MODELS[self.model_type]
@@ -70,7 +70,7 @@ class ResponseGenerator:
             print("✅ Modèle local chargé!")
         
         else:
-            raise ValueError(f"Backend inconnu: {self.model_type}. Utilise 'mistral', 'bloomz', 'groq', ou 'rnn'.")
+            raise ValueError(f"Backend inconnu: {self.model_type}. Utilise 'bloomz', 'groq', ou 'rnn'.")
     
     # ═══════════════════════════════════════════════════
     # GROQ BACKEND
@@ -183,12 +183,6 @@ class ResponseGenerator:
             print("🌐 Utilisation de Groq Cloud...")
             return self._call_groq(prompt, limbic_filter)
         
-        elif self.model_type == "mistral":
-            # Prompt détaillé pour Mistral
-            prompt = self._build_mistral_prompt(message, context, limbic_filter)
-            print(f"💻 Utilisation de Mistral local...")
-            return self._call_llm(prompt)
-        
         elif self.model_type == "bloomz":
             # Prompt simple pour BLOOMZ
             prompt = self._build_bloomz_prompt(message, context, limbic_filter)
@@ -234,64 +228,6 @@ class ResponseGenerator:
         
         return prompt
     
-    def _build_mistral_prompt(self, message: str, context: Dict, limbic_filter: Dict) -> str:
-        """Prompt détaillé pour Mistral"""
-        # Template Mistral
-        tone = limbic_filter.get('tone', 'friendly')
-        rules = limbic_filter.get('behavior_rules', [])
-        
-        if isinstance(rules, list):
-            rules_text = ', '.join(rules)
-        else:
-            rules_text = str(rules)
-        
-        # Extraire les traits culturels et cognitifs
-        cultural = limbic_filter.get('cultural_traits', {})
-        cognitive = limbic_filter.get('cognitive_traits', {})
-        
-        # Construire une description de personnalité enrichie
-        identity_parts = []
-        if cultural.get('origine_caen', 0) > 0.9:
-            identity_parts.append("originaire de Caen")
-        if cultural.get('culture_normande', 0) > 0.8:
-            identity_parts.append("attaché à la culture normande")
-        if cognitive.get('esprit_technique', 0) > 0.8:
-            identity_parts.append("avec un esprit analytique et technique")
-        if cognitive.get('pensee_holistique', 0) > 0.8:
-            identity_parts.append("capable de voir les choses dans leur contexte global")
-            
-        identity_text = ", ".join(identity_parts) if identity_parts else "assistant IA"
-        
-        # Historique
-        history = context.get('history', [])
-        history_text = ""
-        if history:
-            for interaction in history[-3:]:
-                user_msg = interaction.get('input', '')
-                bot_msg = interaction.get('output', '')
-                if user_msg and bot_msg:
-                    history_text += f"Utilisateur: {user_msg}\nNETY: {bot_msg}\n\n"
-        
-        knowledge = context.get('knowledge', '')
-        user_name = context.get('user_name', '')
-        memory_block = self._format_personal_memory(context)
-        
-        prompt = f"""<s>[INST] Tu es NETY, un {identity_text}, créé par Raptor.
-
-Ton: {tone}
-Règles: {rules_text}
-
-{history_text}
-{"Contexte: " + knowledge if knowledge else ""}
-{"Utilisateur: " + user_name if user_name else ""}
-{memory_block}
-
-Question: {message}
-
-Réponds de manière concise et utile. [/INST]"""
-        
-        return prompt
-    
     def _build_bloomz_prompt(self, message: str, context: Dict, limbic_filter: Dict) -> str:
         """Prompt simple pour BLOOMZ"""
         history = context.get('history', [])
@@ -313,11 +249,11 @@ R:"""
         return prompt
     
     # ═══════════════════════════════════════════════════
-    # MODÈLES LOCAUX (Mistral/BLOOMZ)
+    # MODÈLES LOCAUX (BLOOMZ)
     # ═══════════════════════════════════════════════════
     
     def _load_model(self) -> None:
-        """Charge le modèle local (Mistral ou BLOOMZ)"""
+        """Charge le modèle local (BLOOMZ)"""
         from transformers import (
             AutoTokenizer, 
             AutoModelForCausalLM,
@@ -343,38 +279,7 @@ R:"""
             self.tokenizer.pad_token = self.tokenizer.eos_token
         
         # Charger le modèle
-        if self.model_type == "mistral":
-            print("📦 Chargement de Mistral-7B...")
-            
-            if has_gpu and self.config.USE_QUANTIZATION:
-                # 4-bit sur GPU
-                from transformers import BitsAndBytesConfig
-                
-                bnb_config = BitsAndBytesConfig(
-                    load_in_4bit=True,
-                    bnb_4bit_quant_type="nf4",
-                    bnb_4bit_compute_dtype=torch.float16,
-                    bnb_4bit_use_double_quant=True
-                )
-                
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_name,
-                    quantization_config=bnb_config,
-                    device_map="auto",
-                    trust_remote_code=True
-                )
-            else:
-                # CPU
-                print("📦 Chargement sur CPU (lent)")
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_name,
-                    device_map="cpu",
-                    trust_remote_code=True,
-                    low_cpu_mem_usage=True,
-                    torch_dtype=torch.float32
-                )
-        
-        elif self.model_type == "bloomz":
+        if self.model_type == "bloomz":
             print("📦 Chargement de BLOOMZ via pipeline...")
             self.pipeline = pipeline(
                 "text-generation",
@@ -386,7 +291,7 @@ R:"""
         print("✅ Modèle chargé en mémoire")
     
     def _call_llm(self, prompt: str) -> str:
-        """Appelle le modèle local (Mistral ou BLOOMZ)"""
+        """Appelle le modèle local (BLOOMZ)"""
         try:
             if self.model_type == "bloomz":
                 if self.pipeline is None:
@@ -403,52 +308,6 @@ R:"""
                 
                 full_text = result[0]['generated_text']
                 response = full_text[len(prompt):].strip()
-                return response
-            
-            else:
-                # Mistral
-                if self.model is None:
-                    raise RuntimeError("Modèle Mistral non chargé.")
-                if self.tokenizer is None:
-                    raise RuntimeError("Tokenizer non chargé.")
-
-                inputs = self.tokenizer(
-                    prompt,
-                    return_tensors="pt",
-                    truncation=True,
-                    max_length=4096
-                )
-
-                # ✅ Déplacer UNIQUEMENT les inputs (pas le modèle)
-                if hasattr(self.model, 'device'):
-                    inputs = {k: v.to(self.model.device) for k, v in inputs.items()}
-
-                gen_config = self.config.MISTRAL_GENERATION_CONFIG.copy()
-
-                with torch.no_grad():
-                    outputs = self.model.generate(  # type: ignore
-                        input_ids=inputs["input_ids"],
-                        attention_mask=inputs.get("attention_mask"),  # .get() évite KeyError
-                        max_new_tokens=gen_config.get('max_new_tokens', 100),
-                        temperature=gen_config.get('temperature', 0.7),
-                        top_p=gen_config.get('top_p', 0.9),
-                        repetition_penalty=gen_config.get('repetition_penalty', 1.2),
-                        do_sample=gen_config.get('do_sample', True),
-                        pad_token_id=self.tokenizer.pad_token_id,
-                        eos_token_id=self.tokenizer.eos_token_id,
-                    )
-                
-                output_ids = outputs[0]
-                response = self.tokenizer.decode(output_ids, skip_special_tokens=True)
-                
-                # Enlever le prompt initial si présent
-                if response.startswith(prompt):
-                    response = response[len(prompt):].strip()
-                
-                # Nettoyer la réponse
-                if "[/INST]" in response:
-                    response = response.split("[/INST]")[-1].strip()
-                
                 return response
         
         except Exception as e:
@@ -476,7 +335,7 @@ R:"""
                 "cost": "Gratuit (14.4k req/jour)",
                 "speed": "Ultra rapide (500 tok/sec)",
             }
-        elif self.model_type in ["mistral", "bloomz"]:
+        elif self.model_type == "bloomz":
             model_name = self.model_config['name'] if self.model_config else "Inconnu"
             ram = f"{self.model_config['min_ram_gb']} GB" if self.model_config and 'min_ram_gb' in self.model_config else "Inconnu"
             return {

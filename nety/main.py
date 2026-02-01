@@ -243,17 +243,6 @@ def select_model_interactive():
 
     models = [
         {
-            "name": "Mistral-7B (Local GPU - Puissant mais gourmand)",
-            "type": "LOCAL",
-            "key": "mistral",
-            "cost": "Gratuit (utilise ton matériel)",
-            "internet": "Non requis",
-            "speed": "Moyen (dépend GPU)",
-            "quality": "Excellent",
-            "ram": "8 GB + 4 GB VRAM (GPU)",
-            "note": "⚠️ Nécessite un GPU compatible CUDA"
-        },
-        {
             "name": "BLOOMZ-560M (Local CPU - Léger et rapide)",
             "type": "LOCAL",
             "key": "bloomz",
@@ -303,16 +292,15 @@ def select_model_interactive():
         print()
 
     print("💡 Recommandations:")
-    print("   • Pas de GPU → BLOOMZ (option 2)")
-    print("   • GPU disponible → Mistral (option 1)")
-    print("   • PC faible + internet → Groq (option 3)")
-    print("   • Tester le RNN local → RNN (option 4) 🧪")
+    print("   • Recommandé → Groq (ultra rapide + gratuit)")
+    print("   • Offline local → BLOOMZ (léger + gratuit)")
+    print("   • Tester le RNN local → RNN (option 3) 🧪")
     print()
 
     # Sélection
     while True:
         try:
-            choice = input("👉 Choisis ton modèle (1, 2, 3 ou 4): ").strip()
+            choice = input("👉 Choisis ton modèle (1, 2 ou 3): ").strip()
             choice_int = int(choice)
             if 1 <= choice_int <= len(models):
                 selected = models[choice_int - 1]

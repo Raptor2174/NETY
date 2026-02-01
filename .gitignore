@@ -85,12 +85,12 @@ tmp_from_dashboard.txt
 
 # Environment variables
 .env
+.env.exemple
 
 # les modeles téléchargés
 models/
 
 #netoyage de la racine du projet
-.env.*
 .flake8
 desktop.ini
 pytest.ini

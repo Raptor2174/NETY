@@ -61,18 +61,10 @@ class LLMConfig:
     }
     
     # ═══════════════════════════════════════════════════
-    # MISTRAL LOCAL (OPTION 1)
+    # BLOOMZ LOCAL (OPTION 1)
     # ═══════════════════════════════════════════════════
     
     MODELS = {
-        "mistral": {
-            "name": "mistralai/Mistral-7B-Instruct-v0.2",
-            "type": "mistral",
-            "requires_gpu": True,
-            "min_ram_gb": 8,
-            "gpu_vram_gb": 4,
-            "context_length": 32768,
-        },
         "bloomz": {
             "name": "bigscience/bloomz-560m",
             "type": "bloom",
@@ -102,22 +94,20 @@ class LLMConfig:
 
     # Modèles disponibles
     AVAILABLE_MODELS = {
-        "mistral": MODELS["mistral"],
         "bloomz": MODELS["bloomz"],
         "groq": GROQ_CONFIG,
-        "rnn": RNN_CONFIG,  # ✨ NOUVEAU
+        "rnn": RNN_CONFIG,  # ✨ RNN local
     }
     
-    CURRENT_MODEL = "mistral"
+    CURRENT_MODEL = "bloomz"
     
-    # Paramètres Mistral
-    MISTRAL_GENERATION_CONFIG = {
-        "max_new_tokens": 100,
-        "temperature": 0.7,
+    # Paramètres BLOOMZ
+    BLOOMZ_GENERATION_CONFIG = {
+        "max_new_tokens": 120,
+        "temperature": 0.6,
         "do_sample": True,
-        "top_p": 0.9,
-        "repetition_penalty": 1.2,
-        "early_stopping": True,
+        "repetition_penalty": 1.5,
+        "no_repeat_ngram_size": 3,
     }
     
     # Quantization

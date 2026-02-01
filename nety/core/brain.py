@@ -59,7 +59,7 @@ class Brain:
         self.response_generator = ResponseGenerator(model_type=model_type)
         
         # Afficher les infos
-        print(f"✅ Modèle chargé: Mistral-7B")
+        print(f"✅ Modèle chargé: {model_type.upper()}")
         print(f"📊 Contexte max: 8192 tokens")
         
         # Historique des interactions pour get_context()
