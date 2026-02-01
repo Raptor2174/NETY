@@ -14,8 +14,8 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="nety",
     version="1.0.0",
-    author="NETY Development Team",
-    description="NETY - Advanced AI with emotional processing",
+    author="Raptor_",
+    description="NETY",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/NETY",

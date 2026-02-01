@@ -88,3 +88,9 @@ tmp_from_dashboard.txt
 
 # les modeles téléchargés
 models/
+
+#netoyage de la racine du projet
+.env.*
+.flake8
+desktop.ini
+pytest.ini
