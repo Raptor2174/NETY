@@ -5,7 +5,7 @@ Mistral (local GPU) + BLOOMZ (local CPU) + Groq (cloud gratuit)
 import os
 from typing import Literal
 
-ModelChoice = Literal["mistral", "bloomz", "groq"]
+ModelChoice = Literal["mistral", "bloomz", "groq", "rnn"]
 
 class ModelSelector:
     """Gestionnaire de sélection de modèle"""
@@ -47,6 +47,18 @@ class ModelSelector:
                 "internet": "📶 Requis",
                 "speed": "⚡⚡⚡ Ultra rapide (500 tok/sec)",
                 "quality": "🧠 Excellent",
+            },
+            "4": {
+                "name": "rnn",
+                "display": "RNN Local - TextualCortex (Expérimental)",
+                "backend": "local",
+                "requires_gpu": False,
+                "ram_gb": 0.5,
+                "vram_gb": 0,
+                "cost": "💰 Gratuit (utilise ton matériel)",
+                "internet": "📶 Non requis",
+                "speed": "⚡ Rapide (CPU/GPU)",
+                "quality": "🧪 En apprentissage",
             }
         }
     
@@ -83,6 +95,7 @@ class ModelSelector:
         print("   • Pas de GPU → BLOOMZ (option 2)")
         print("   • GPU disponible → Mistral (option 1)")
         print("   • PC faible + internet → Groq (option 3)")
+        print("   • Tester le RNN local → RNN (option 4) 🧪")
         print()
     
     def get_user_choice(self) -> ModelChoice:
@@ -90,7 +103,7 @@ class ModelSelector:
         self.display_menu()
         
         while True:
-            choice = input("👉 Choisis ton modèle (1, 2 ou 3): ").strip()
+            choice = input("👉 Choisis ton modèle (1, 2, 3 ou 4): ").strip()
             
             if choice in self.available_models:
                 selected = self.available_models[choice]
@@ -169,13 +182,16 @@ class ModelSelector:
                         if confirm != 'o':
                             print("💡 Choisis BLOOMZ (option 2) pour CPU")
                             continue
+                elif selected["name"] == "rnn":
+                    print("\n🧪 Mode RNN local expérimental activé")
+                    print("   Qualité variable - destiné aux tests et observations")
                 
                 print(f"\n✅ Modèle sélectionné: {selected['display']}")
                 print()
                 return selected["name"]
             
             else:
-                print("❌ Choix invalide. Entre 1, 2 ou 3.")
+                print("❌ Choix invalide. Entre 1, 2, 3 ou 4.")
     
     def _check_internet(self) -> bool:
         """Vérifie la connexion internet"""
