@@ -172,6 +172,24 @@ class ResponseGenerator:
     # ═══════════════════════════════════════════════════
     # CONSTRUCTION DES PROMPTS
     # ═══════════════════════════════════════════════════
+
+    def _format_personal_memory(self, context: Dict) -> str:
+        memories = context.get("personal_memory", [])
+        profile = context.get("user_profile", {})
+        parts = []
+
+        if profile:
+            profile_items = [f"{k}: {v}" for k, v in profile.items()]
+            parts.append("Profil utilisateur: " + ", ".join(profile_items))
+
+        if memories:
+            parts.append("Souvenirs pertinents:")
+            for mem in memories[:3]:
+                text = mem.get("text", "")
+                if text:
+                    parts.append(f"- {text}")
+
+        return "\n".join(parts)
     
     def _build_simple_prompt(self, message: str, context: Dict, limbic_filter: Dict) -> str:
         """Prompt simplifié pour APIs cloud (Groq)"""
@@ -190,6 +208,10 @@ class ResponseGenerator:
             parts.append("")
         
         # Message actuel
+        memory_block = self._format_personal_memory(context)
+        if memory_block:
+            parts.append(memory_block)
+            parts.append("")
         parts.append(f"User: {message}")
         
         return "\n".join(parts)
@@ -234,6 +256,7 @@ class ResponseGenerator:
         
         knowledge = context.get('knowledge', '')
         user_name = context.get('user_name', '')
+        memory_block = self._format_personal_memory(context)
         
         prompt = f"""<s>[INST] Tu es NETY, un {identity_text}, créé par Raptor.
 
@@ -243,6 +266,7 @@ Règles: {rules_text}
 {history_text}
 {"Contexte: " + knowledge if knowledge else ""}
 {"Utilisateur: " + user_name if user_name else ""}
+{memory_block}
 
 Question: {message}
 
@@ -262,7 +286,10 @@ Réponds de manière concise et utile. [/INST]"""
                 if user_msg and bot_msg:
                     history_text += f"Q: {user_msg}\nR: {bot_msg}\n\n"
         
-        prompt = f"""{history_text}Q: {message}
+        memory_block = self._format_personal_memory(context)
+        memory_prefix = f"{memory_block}\n" if memory_block else ""
+
+        prompt = f"""{memory_prefix}{history_text}Q: {message}
 R:"""
         
         return prompt

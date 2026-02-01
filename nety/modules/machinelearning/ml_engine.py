@@ -1,34 +1,334 @@
+import json
+import os
+import re
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple
+
 import torch
 import torch.nn as nn
 
+from nety.modules.text.tokenizer import SimpleTokenizer
+
+
+class TextClassifier(nn.Module):
+    def __init__(self, vocab_size: int, embed_dim: int, hidden_size: int, num_classes: int):
+        super().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_dim, padding_idx=0)
+        self.lstm = nn.LSTM(embed_dim, hidden_size, batch_first=True)
+        self.fc = nn.Linear(hidden_size, num_classes)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        embeddings = self.embedding(x)
+        out, _ = self.lstm(embeddings)
+        last = out[:, -1, :]
+        return self.fc(last)
+
+
 class MLEngine:
-    def __init__(self, model=None):
+    CATEGORY_LABELS = [
+        "identity",
+        "preferences",
+        "location",
+        "contact",
+        "work",
+        "goals",
+        "health",
+        "other",
+    ]
+
+    _STOPWORDS = {
+        "le",
+        "la",
+        "les",
+        "un",
+        "une",
+        "des",
+        "de",
+        "du",
+        "dans",
+        "et",
+        "ou",
+        "pour",
+        "par",
+        "avec",
+        "sans",
+        "je",
+        "tu",
+        "il",
+        "elle",
+        "nous",
+        "vous",
+        "ils",
+        "elles",
+        "mon",
+        "ma",
+        "mes",
+        "ton",
+        "ta",
+        "tes",
+        "son",
+        "sa",
+        "ses",
+        "est",
+        "suis",
+        "sont",
+        "être",
+        "avoir",
+        "a",
+        "ai",
+        "as",
+        "ce",
+        "cet",
+        "cette",
+        "ces",
+        "ça",
+        "c'est",
+        "sur",
+        "au",
+        "aux",
+        "à",
+    }
+
+    _KEY_PATTERNS: List[Tuple[str, str, str]] = [
+        (r"\bje m'appelle\s+([\wÀ-ÿ'\-]+)", "identity", "name"),
+        (r"\bmon nom\s+est\s+([\wÀ-ÿ'\-]+)", "identity", "name"),
+        (r"\bje suis\s+([\wÀ-ÿ'\- ]{2,})", "identity", "traits"),
+        (r"\bj'habite\s+à\s+([\wÀ-ÿ'\- ]{2,})", "location", "location"),
+        (r"\bje vis\s+à\s+([\wÀ-ÿ'\- ]{2,})", "location", "location"),
+        (r"\bmon email\s+est\s+([\w.\-+]+@[\w\-]+\.[\w\-.]+)", "contact", "email"),
+        (r"\b(mon|ma)\s+téléphone\s*(est|:)?\s*([\d +().-]{6,})", "contact", "phone"),
+        (r"\bj'aime\s+([\wÀ-ÿ'\- ]{2,})", "preferences", "likes"),
+        (r"\bje déteste\s+([\wÀ-ÿ'\- ]{2,})", "preferences", "dislikes"),
+        (r"\bmon objectif\s*(est|:)?\s*([\wÀ-ÿ'\- ]{2,})", "goals", "goal"),
+        (r"\bje travaille\s+chez\s+([\wÀ-ÿ'\- ]{2,})", "work", "company"),
+        (r"\bje suis\s+malade\b|\bj'ai\s+mal\b", "health", "health"),
+    ]
+
+    def __init__(self, model: Optional[nn.Module] = None, data_dir: Optional[str] = None):
         """
-        Initialise le moteur ML
-        
+        Initialise le moteur ML.
+
         Args:
             model: Modèle PyTorch (nn.Module) ou None pour un modèle par défaut
+            data_dir: Répertoire de stockage des données ML
         """
-        if model is None:
-            # Créer un modèle simple par défaut pour la V1
-            self.model = self._create_default_model()
-        else:
-            self.model = model
-        
+        self.root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        self.data_dir = data_dir or os.path.join(self.root_dir, "data", "processed", "ml_engine")
+        self.model_path = os.path.join(self.data_dir, "model.pt")
+        self.vocab_path = os.path.join(self.data_dir, "vocab.json")
+        self.labels_path = os.path.join(self.data_dir, "labels.json")
+        self.memory_path = os.path.join(self.data_dir, "memory.jsonl")
+        self.stats_path = os.path.join(self.data_dir, "stats.json")
+
+        self._ensure_dirs()
+
+        self.tokenizer = SimpleTokenizer(vocab_size=2000)
+
+        self.model = model or self._create_default_model()
+        self._load_state_if_available()
+
         print("✓ ML Engine initialisé")
 
-    def _create_default_model(self):
-        """Crée un modèle simple pour la V1 (sera remplacé plus tard)"""
-        # Pour l'instant, un modèle factice pour ne pas crasher
-        class DummyModel(nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.fc = nn.Linear(10, 10)
-            
-            def forward(self, x):
-                return self.fc(x)
-        
-        return DummyModel()
+    # ==========================================
+    # 🔧 INITIALISATION & STOCKAGE
+    # ==========================================
+    def _ensure_dirs(self) -> None:
+        os.makedirs(self.data_dir, exist_ok=True)
+
+    def _create_default_model(self) -> nn.Module:
+        """Crée un modèle simple pour la V1, mais entraînable"""
+        return TextClassifier(vocab_size=2000, embed_dim=64, hidden_size=64, num_classes=len(self.CATEGORY_LABELS))
+
+    def _load_state_if_available(self) -> None:
+        if os.path.exists(self.vocab_path):
+            self.tokenizer.load_vocab(self.vocab_path)
+
+        if os.path.exists(self.labels_path):
+            with open(self.labels_path, "r", encoding="utf-8") as f:
+                labels = json.load(f)
+                if labels:
+                    self.CATEGORY_LABELS = labels
+
+        if os.path.exists(self.model_path):
+            state = torch.load(self.model_path, map_location="cpu")
+            self.model.load_state_dict(state)
+
+    def _save_state(self) -> None:
+        self.tokenizer.save_vocab(self.vocab_path)
+        with open(self.labels_path, "w", encoding="utf-8") as f:
+            json.dump(self.CATEGORY_LABELS, f, ensure_ascii=False, indent=2)
+        torch.save(self.model.state_dict(), self.model_path)
+
+    def _append_memory(self, entry: Dict) -> None:
+        with open(self.memory_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+    def _load_memory(self, limit: Optional[int] = None) -> List[Dict]:
+        if not os.path.exists(self.memory_path):
+            return []
+
+        entries: List[Dict] = []
+        with open(self.memory_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                entries.append(json.loads(line))
+
+        if limit is not None:
+            return entries[-limit:]
+        return entries
+
+    def get_stats(self) -> Dict:
+        if not os.path.exists(self.stats_path):
+            return {"total_entries": 0, "category_counts": {}, "last_train_at": None}
+        with open(self.stats_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    # ==========================================
+    # 🧠 EXTRACTION D'INFORMATIONS CLÉS
+    # ==========================================
+    def extract_key_info(self, text: str) -> Dict:
+        facts: Dict[str, List[str]] = {}
+        categories: List[str] = []
+
+        for pattern, category, field in self._KEY_PATTERNS:
+            match = re.search(pattern, text, flags=re.IGNORECASE)
+            if match:
+                value = match.group(match.lastindex) if match.lastindex else match.group(0)
+                value = value.strip()
+                if value:
+                    facts.setdefault(field, []).append(value)
+                if category not in categories:
+                    categories.append(category)
+
+        keywords = self._extract_keywords(text)
+        if not categories:
+            categories = ["other"]
+
+        return {
+            "facts": facts,
+            "categories": categories,
+            "keywords": keywords,
+        }
+
+    def _extract_keywords(self, text: str) -> List[str]:
+        tokens = re.findall(r"[\wÀ-ÿ'\-]+", text.lower())
+        keywords = [t for t in tokens if len(t) > 3 and t not in self._STOPWORDS]
+        unique_keywords: List[str] = []
+        for word in keywords:
+            if word not in unique_keywords:
+                unique_keywords.append(word)
+        return unique_keywords[:10]
+
+    # ==========================================
+    # 📚 MÉMOIRE & APPRENTISSAGE
+    # ==========================================
+    def ingest_text(self, text: str, user_id: Optional[str] = None, metadata: Optional[Dict] = None) -> Dict:
+        analysis = self.extract_key_info(text)
+        entry = {
+            "id": f"{datetime.utcnow().isoformat()}-{len(text)}",
+            "timestamp": datetime.utcnow().isoformat(),
+            "text": text,
+            "facts": analysis["facts"],
+            "categories": analysis["categories"],
+            "keywords": analysis["keywords"],
+            "user_id": user_id,
+            "meta": metadata or {},
+        }
+        self._append_memory(entry)
+        self._update_stats(entry)
+        return entry
+
+    def _update_stats(self, entry: Dict) -> None:
+        stats = {"total_entries": 0, "category_counts": {}, "last_train_at": None}
+        if os.path.exists(self.stats_path):
+            with open(self.stats_path, "r", encoding="utf-8") as f:
+                stats = json.load(f)
+
+        stats["total_entries"] = stats.get("total_entries", 0) + 1
+        for category in entry.get("categories", []):
+            stats.setdefault("category_counts", {})
+            stats["category_counts"][category] = stats["category_counts"].get(category, 0) + 1
+
+        with open(self.stats_path, "w", encoding="utf-8") as f:
+            json.dump(stats, f, ensure_ascii=False, indent=2)
+
+    def train_from_memory(self, epochs: int = 5, learning_rate: float = 0.001, min_samples: int = 5) -> bool:
+        entries = self._load_memory()
+        labeled = [e for e in entries if e.get("categories")]
+        if len(labeled) < min_samples:
+            print("ℹ️ Pas assez d'exemples pour entraîner un modèle ML.")
+            return False
+
+        texts = [e["text"] for e in labeled]
+        labels = [self._category_to_label(e["categories"]) for e in labeled]
+
+        self.tokenizer.fit(texts)
+        inputs = torch.stack([self.tokenizer.encode(t) for t in texts])
+        targets = torch.tensor(labels, dtype=torch.long)
+
+        self.model.train()
+        optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        loss_fn = nn.CrossEntropyLoss()
+
+        for epoch in range(epochs):
+            optimizer.zero_grad()
+            outputs = self.model(inputs)
+            loss = loss_fn(outputs, targets)
+            loss.backward()
+            optimizer.step()
+            print(f"Epoch {epoch + 1}/{epochs}, Loss: {loss.item():.4f}")
+
+        self._save_state()
+        stats = self.get_stats()
+        stats["last_train_at"] = datetime.utcnow().isoformat()
+        with open(self.stats_path, "w", encoding="utf-8") as f:
+            json.dump(stats, f, ensure_ascii=False, indent=2)
+        return True
+
+    def _category_to_label(self, categories: List[str]) -> int:
+        for category in categories:
+            if category in self.CATEGORY_LABELS:
+                return self.CATEGORY_LABELS.index(category)
+        return self.CATEGORY_LABELS.index("other")
+
+    def predict_category(self, text: str) -> str:
+        self.model.eval()
+        encoded = self.tokenizer.encode(text).unsqueeze(0)
+        with torch.no_grad():
+            outputs = self.model(encoded)
+            predicted = torch.argmax(outputs, dim=1).item()
+        return self.CATEGORY_LABELS[int(predicted)]
+
+    def get_relevant_memories(self, query: str, limit: int = 5) -> List[Dict]:
+        keywords = set(self._extract_keywords(query))
+        if not keywords:
+            return []
+
+        scored: List[Tuple[int, Dict]] = []
+        for entry in self._load_memory(limit=200):
+            entry_keywords = set(entry.get("keywords", []))
+            score = len(keywords.intersection(entry_keywords))
+            if score > 0:
+                scored.append((score, entry))
+
+        scored.sort(key=lambda item: item[0], reverse=True)
+        return [entry for _, entry in scored[:limit]]
+
+    def get_user_profile(self, user_id: Optional[str] = None) -> Dict[str, str]:
+        profile: Dict[str, str] = {}
+        entries = self._load_memory(limit=200)
+        for entry in reversed(entries):
+            if user_id and entry.get("user_id") != user_id:
+                continue
+            facts = entry.get("facts", {})
+            for field, values in facts.items():
+                if not values:
+                    continue
+                if field not in profile:
+                    profile[field] = values[0]
+        return profile
 
     # ==========================================
     # 🎯 MÉTHODES APPELÉES PAR BRAIN
@@ -39,10 +339,7 @@ class MLEngine:
         Pour V1 : implémentation simple, sera améliorée avec ML
         """
         print(f"🔄 ML Engine transforme : {text}")
-        
-        # Pour l'instant : transformation simple (V1)
-        # Tu pourras ajouter le vrai ML plus tard
-        transformed = text.upper()  # Exemple simple
+        transformed = text.upper()
         return f"[Transformé] {transformed}"
 
     def generate_response(self, text: str) -> str:
@@ -51,27 +348,40 @@ class MLEngine:
         Pour V1 : réponses basiques, sera améliorée avec ML
         """
         print(f"💬 ML Engine génère une réponse pour : {text}")
-        
-        # Pour l'instant : réponses prédéfinies (V1)
-        # Tu pourras ajouter un vrai modèle de langage plus tard
+
+        analysis = self.extract_key_info(text)
+        if analysis["facts"]:
+            self.ingest_text(text)
+            if "name" in analysis["facts"]:
+                name = analysis["facts"]["name"][0]
+                return f"Enchanté, {name}. Je note ça."
+            if "likes" in analysis["facts"]:
+                likes = analysis["facts"]["likes"][0]
+                return f"D'accord, tu aimes {likes}. Je le retiens."
+            if "location" in analysis["facts"]:
+                location = analysis["facts"]["location"][0]
+                return f"Merci ! J'ai noté que tu es à {location}."
+            return "Merci, j'ai enregistré cette information."
+
         responses = {
             "bonjour": "Bonjour ! Comment puis-je vous aider ?",
             "salut": "Salut ! Que puis-je faire pour toi ?",
-            "comment ça va": "Je vais bien, merci ! Et toi ?"
+            "comment ça va": "Je vais bien, merci ! Et toi ?",
         }
-        
+
         text_lower = text.lower()
         for keyword, response in responses.items():
             if keyword in text_lower:
                 return response
-        
-        return f"Je comprends que tu dis : '{text}'. Comment puis-je t'aider ?"
+
+        predicted = self.predict_category(text)
+        return f"Je comprends. Catégorie détectée : {predicted}. Peux-tu préciser ?"
 
     # ==========================================
     # 🧠 MÉTHODES ML ORIGINALES
     # ==========================================
-    def train(self, data, labels, epochs=10, learning_rate=0.01):
-        """Entraîne le modèle"""
+    def train(self, data, labels, epochs: int = 10, learning_rate: float = 0.01):
+        """Entraîne le modèle (API brute)"""
         optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
         loss_fn = nn.CrossEntropyLoss()
 
@@ -82,7 +392,7 @@ class MLEngine:
             loss = loss_fn(outputs, labels)
             loss.backward()
             optimizer.step()
-            print(f'Epoch {epoch+1}/{epochs}, Loss: {loss.item()}')
+            print(f"Epoch {epoch + 1}/{epochs}, Loss: {loss.item():.4f}")
 
     def evaluate(self, data, labels):
         """Évalue le modèle"""
@@ -91,9 +401,9 @@ class MLEngine:
             outputs = self.model(data)
             _, predicted = torch.max(outputs, 1)
             accuracy = (predicted == labels).sum().item() / labels.size(0)
-        print(f'Accuracy: {accuracy * 100:.2f}%')
+        print(f"Accuracy: {accuracy * 100:.2f}%")
         return accuracy
-    
+
     def predict(self, data):
         """Fait une prédiction brute"""
         self.model.eval()

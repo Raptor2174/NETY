@@ -10,6 +10,7 @@ from nety.knowledge_base.knowledge_manager import KnowledgeManager
 from nety.core.intent_analyzer import IntentAnalyzer
 from nety.core.response_generator import ResponseGenerator
 from nety.core.llm_config import LLMConfig
+from nety.modules.machinelearning.ml_engine import MLEngine
 
 
 
@@ -22,6 +23,7 @@ class Brain:
         self.memory = MemoryManager()
         self.knowledge = KnowledgeManager()
         self.intent_analyzer = IntentAnalyzer()
+        self.ml_engine = MLEngine()
         
         # Déterminer le modèle à utiliser
         if model_type is None:
@@ -43,7 +45,8 @@ class Brain:
             "cortex_limbic": "actif",
             "memory": "actif",
             "knowledge_base": "actif",
-            "intent_analyzer": "actif"
+            "intent_analyzer": "actif",
+            "ml_engine": "actif"
         }
         
         # Dictionnaire des modules pour compatibilité
@@ -104,12 +107,20 @@ class Brain:
                 except:
                     pass
         
+        ml_profile = self.ml_engine.get_user_profile()
+        if not user_name:
+            user_name = ml_profile.get("name")
+
+        personal_memories = self.ml_engine.get_relevant_memories(message)
+
         context = {
             "message": message,
             "intent": intent,
             "history": self.context_history[-5:],
             "knowledge": knowledge_data,
-            "user_name": user_name  # ✅ Info clé extraite
+            "user_name": user_name,  # ✅ Info clé extraite
+            "personal_memory": personal_memories,
+            "user_profile": ml_profile
         }
         return context
     
@@ -129,6 +140,15 @@ class Brain:
         response = self.response_generator.generate(
             message, context, personality_filter
         )
+
+        # [4.5] Ingestion ML (mémoire personnelle)
+        try:
+            self.ml_engine.ingest_text(message, user_id=context.get("user_id"))
+            stats = self.ml_engine.get_stats()
+            if stats.get("total_entries", 0) % 20 == 0:
+                self.ml_engine.train_from_memory()
+        except Exception as exc:
+            print(f"⚠️ ML Engine ingestion error: {exc}")
         
         # [5] Enregistrement de l'interaction pour apprentissage ✨
         user_sentiment = self._analyze_user_sentiment(message)
