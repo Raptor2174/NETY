@@ -97,7 +97,7 @@ class ResponseGenerator:
             print("💡 Vérifie ta clé API et ta connexion internet")
             return False
     
-    def _call_groq(self, prompt: str) -> str:
+    def _call_groq(self, prompt: str, limbic_filter: Optional[Dict] = None) -> str:
         """Génère une réponse avec Groq"""
         if not self.groq_client:
             raise RuntimeError("Client Groq non initialisé")
@@ -105,12 +105,21 @@ class ResponseGenerator:
         model = self.config.GROQ_CONFIG["default_model"]
         
         try:
+            system_msg = "Tu es NETY, un assistant IA amical et intelligent créé par Raptor."
+            if limbic_filter:
+                emotional_state = limbic_filter.get('emotional_state', {})
+                if emotional_state:
+                    state = emotional_state.get('state', '')
+                    if state:
+                        system_msg += f"\n\nÉtat émotionnel actuel: {state}."
+                        system_msg += "\nTu es conscient de tes émotions et tu peux les partager si on te le demande."
+
             response = self.groq_client.chat.completions.create(
                 model=model,
                 messages=[
                     {
                         "role": "system",
-                        "content": "Tu es NETY, un assistant IA amical et intelligent créé par Raptor. Tu réponds en français de manière concise et utile."
+                        "content": system_msg
                     },
                     {
                         "role": "user",
@@ -152,7 +161,7 @@ class ResponseGenerator:
             # Prompt simple pour Groq
             prompt = self._build_simple_prompt(message, context, limbic_filter)
             print("🌐 Utilisation de Groq Cloud...")
-            return self._call_groq(prompt)
+            return self._call_groq(prompt, limbic_filter)
         
         elif self.model_type == "mistral":
             # Prompt détaillé pour Mistral
@@ -192,28 +201,64 @@ class ResponseGenerator:
         return "\n".join(parts)
     
     def _build_simple_prompt(self, message: str, context: Dict, limbic_filter: Dict) -> str:
-        """Prompt simplifié pour APIs cloud (Groq)"""
+        """Prompt enrichi pour Groq avec mémoire complète"""
         parts = []
-        
-        # Historique récent (2 derniers messages)
+
+        # 🆕 Ajouter les KEY_INFO
+        key_infos = context.get('key_infos', [])
+        if key_infos:
+            parts.append("=== Informations clés sur l'utilisateur ===")
+            for info in key_infos:
+                if info.get("type") == "correlation":
+                    parts.append(f"{info['field']}: {info['value']}")
+            parts.append("")
+
+        # 🆕 Ajouter l'état émotionnel
+        emotional_state = limbic_filter.get('emotional_state', {})
+        if emotional_state:
+            dominant = emotional_state.get('dominant_emotion', 'neutre')
+            intensity = emotional_state.get('intensity', 0.0)
+            parts.append("=== État émotionnel de NETY ===")
+            parts.append(f"Émotion dominante: {dominant} (intensité: {intensity:.2f})")
+
+            all_emotions = emotional_state.get('all_emotions', {})
+            parts.append("Toutes les émotions:")
+            for emotion, value in all_emotions.items():
+                parts.append(f"- {emotion}: {value:.2f}")
+            parts.append("")
+
+        # 🆕 Ajouter les traits culturels
+        cultural = limbic_filter.get('cultural_traits', {})
+        if cultural:
+            parts.append("=== Traits culturels de NETY ===")
+            for trait, value in cultural.items():
+                if value > 0.5:
+                    parts.append(f"- {trait}: {value:.2f}")
+            parts.append("")
+
+        # Historique
         history = context.get('history', [])
         if history:
-            parts.append("Contexte:")
+            parts.append("=== Contexte récent ===")
             for interaction in history[-2:]:
-                user_msg = interaction.get('input', '')
-                bot_msg = interaction.get('output', '')
-                if user_msg and bot_msg:
-                    parts.append(f"User: {user_msg}")
-                    parts.append(f"NETY: {bot_msg}")
+                parts.append(f"User: {interaction.get('input', '')}")
+                parts.append(f"NETY: {interaction.get('output', '')}")
             parts.append("")
-        
+
+        # Mémoire (AUGMENTER À 10 AU LIEU DE 3)
+        memories = context.get("personal_memory", [])
+        if memories:
+            parts.append("=== Souvenirs pertinents ===")
+            for mem in memories[:10]:
+                text = mem.get("text", "")
+                categories = mem.get("categories", [])
+                if text:
+                    parts.append(f"- {text} [Catégories: {', '.join(categories)}]")
+            parts.append("")
+
         # Message actuel
-        memory_block = self._format_personal_memory(context)
-        if memory_block:
-            parts.append(memory_block)
-            parts.append("")
         parts.append(f"User: {message}")
-        
+
         return "\n".join(parts)
     
     def _build_mistral_prompt(self, message: str, context: Dict, limbic_filter: Dict) -> str:
@@ -420,7 +465,12 @@ R:"""
                         eos_token_id=self.tokenizer.eos_token_id,
                     )
                 
-                response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+                output_ids = outputs[0]
+                response = self.tokenizer.decode(output_ids, skip_special_tokens=True)
+                
+                # Enlever le prompt initial si présent
+                if response.startswith(prompt):
+                    response = response[len(prompt):].strip()
                 
                 # Nettoyer la réponse
                 if "[/INST]" in response:
