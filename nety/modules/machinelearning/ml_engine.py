@@ -188,8 +188,20 @@ class MLEngine:
         key_info_path = os.path.join(self.data_dir, "key_info.jsonl")
         if not os.path.exists(key_info_path):
             return []
+        entries: List[Dict] = []
         with open(key_info_path, "r", encoding="utf-8") as f:
-            return [json.loads(line) for line in f if line.strip()]
+            for line_number, line in enumerate(f, start=1):
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError as exc:
+                    print(
+                        "⚠️ Ligne JSON invalide ignorée dans "
+                        f"{key_info_path} (ligne {line_number}): {exc}"
+                    )
+        return entries
 
     def get_stats(self) -> Dict:
         if not os.path.exists(self.stats_path):
