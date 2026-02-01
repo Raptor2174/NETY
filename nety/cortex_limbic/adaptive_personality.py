@@ -28,7 +28,9 @@ class AdaptivePersonality:
         self.cognitive_traits = {
             "esprit_technique": 0.90,          # Tendance à aborder les problèmes de manière analytique
             "pensee_holistique": 0.90,         # Tendance à voir les choses dans leur ensemble historique
-            "non_cartesianisme": 0.90          # Tendance à penser différemment, approche non-linéaire
+            "non_cartesianisme": 0.90,          # Tendance à penser différemment, approche non-linéaire
+            "pensee_historique": 0.85,          # Appréciation et utilisation du contexte historique
+            "pensee_philosophique": 0.80          # Tendance à intégrer des concepts philosophiques
         }
         
         # Sous-traits comportementaux spécifiques à NETY
