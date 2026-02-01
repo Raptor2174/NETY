@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Setup configuration for NETY - Neural Empathetic Text Intelligence System
+Setup configuration for NETY 
 """
 
 from setuptools import setup, find_packages
@@ -15,7 +15,7 @@ setup(
     name="nety",
     version="1.0.0",
     author="NETY Development Team",
-    description="Neural Empathetic Text Intelligence System - Advanced AI with emotional processing",
+    description="NETY - Advanced AI with emotional processing",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/yourusername/NETY",
