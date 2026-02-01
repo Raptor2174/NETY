@@ -3,14 +3,21 @@ Module Brain - Cerveau central de NETY
 """
 # nety/core/brain.py
 from typing import Optional
+import torch
+
+# Imports locaux
+from nety.cortex_limbic.emotion_engine import EmotionEngine
 from nety.cortex_limbic.limbic_filter import LimbicFilter
 from nety.cortex_limbic.memory_manager import MemoryManager
-from nety.cortex_limbic.emotion_engine import EmotionEngine
+# Import lazy pour TextualCortex (évite les imports circulaires)
 from nety.knowledge_base.knowledge_manager import KnowledgeManager
 from nety.core.intent_analyzer import IntentAnalyzer
 from nety.core.response_generator import ResponseGenerator
 from nety.core.llm_config import LLMConfig
 from nety.modules.machinelearning.ml_engine import MLEngine
+
+# Import lazy de TextualCortex
+TextualCortex = None
 
 
 
@@ -24,6 +31,24 @@ class Brain:
         self.knowledge = KnowledgeManager()
         self.intent_analyzer = IntentAnalyzer()
         self.ml_engine = MLEngine()
+        self.emotion_engine = EmotionEngine()
+        
+        # ✨ Initialiser le Cortex Textuel RNN - Cerveau Neuronal Textuel Autonome (lazy)
+        print("🧠 Initialisation du Cortex Textuel (RNN bi-directionnel)...")
+        try:
+            from nety.cortex_limbic.textual_cortex import TextualCortex as _TextualCortex
+            self.textual_cortex = _TextualCortex(
+                hidden_size=256,
+                output_size=512,
+                num_layers=3,
+                num_heads=4,
+                dropout=0.3,
+                emotion_engine=self.emotion_engine,
+                memory_manager=self.memory
+            )
+        except ImportError as e:
+            print(f"⚠️ Erreur d'importation du Cortex Textuel: {e}")
+            self.textual_cortex = None
         
         # Déterminer le modèle à utiliser
         if model_type is None:
@@ -42,6 +67,7 @@ class Brain:
         
         # État des modules
         self.modules_status = {
+            "cortex_textuel": "actif",
             "cortex_limbic": "actif",
             "memory": "actif",
             "knowledge_base": "actif",
@@ -157,6 +183,35 @@ class Brain:
         # [3] Filtrage limbique avancé ✨
         personality_filter = self.limbic_filter.apply_filter(context)
         
+        # [3.5] ✨ TRAITEMENT RNN DU CORTEX TEXTUEL (Nouveau!)
+        # Traiter le message via le cortex neuronal textuel autonome
+        if self.textual_cortex is not None:
+            try:
+                # Convertir le message en embeddings pour le RNN
+                message_embedding = self._get_message_embedding(message)
+                if message_embedding is not None:
+                    # Traiter via le cortex textuel avec modulation émotionnelle
+                    neural_output, neural_metadata = self.textual_cortex.process_text_sequence(
+                        message_embedding,
+                        emotional_context={
+                            "emotions": self.emotion_engine.emotions
+                        },
+                        use_persistent_state=True
+                    )
+                    
+                    # Ajouter l'activation neuronal au contexte
+                    context["neural_activation"] = neural_metadata["activation_level"]
+                    context["neural_output"] = neural_output.detach().cpu() if isinstance(neural_output, torch.Tensor) else neural_output
+                    
+                    # Enregistrer dans la fenêtre contextuelle du cortex
+                    self.textual_cortex.add_to_context_window({
+                        "input": message,
+                        "timestamp": neural_metadata["timestamp"],
+                        "activation": neural_metadata["activation_level"]
+                    })
+            except Exception as e:
+                print(f"⚠️ Cortex textuel processing: {e}")
+        
         # [4] Génération de réponse
         response = self.response_generator.generate(
             message, context, personality_filter
@@ -181,7 +236,8 @@ class Brain:
             "response": response,
             "user_id": context.get("user_id"),
             "emotional_state": personality_filter.get("emotional_state"),
-            "user_sentiment": user_sentiment
+            "user_sentiment": user_sentiment,
+            "neural_activation": context.get("neural_activation")
         }
         # Store interaction in memory instead
         self.memory.add_memory(f"Interaction: {message[:50]} -> {response[:50]}")
@@ -205,6 +261,30 @@ class Brain:
             return "négatif"
         else:
             return "neutre"
+    
+    def _get_message_embedding(self, message: str) -> Optional[torch.Tensor]:
+        """
+        Convertit un message en embeddings pour le cortex textuel RNN.
+        Utilise une dimension de 768 (standard pour les embeddings modernes).
+        """
+        try:
+            import numpy as np
+            
+            # Pour la démo, créer un embedding basé sur le hash du message
+            # En production, utiliser un vrai modèle d'embedding (FastText, BERT, etc.)
+            hash_val = hash(message)
+            np.random.seed(abs(hash_val) % (2**31))
+            
+            # Créer un embedding synthétique (768 dimensions)
+            embedding = np.random.randn(1, 1, 768).astype(np.float32)
+            
+            # Normaliser
+            embedding = embedding / (np.linalg.norm(embedding) + 1e-8)
+            
+            return torch.from_numpy(embedding)
+        except Exception as e:
+            print(f"⚠️ Erreur lors de la création d'embedding: {e}")
+            return None
     
     def get_modules_status(self):
         """Retourne l'état de tous les modules"""
