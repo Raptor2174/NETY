@@ -148,6 +148,9 @@ class LogsView:
         else:
             self.logs_display.insert(tk.END, "[Aucun log disponible]\n")
 
+        # Ajoute SEMI-OPTIONNEL pour debug (voir la taille des messages):
+        # print(f"Nb logs: {len(logs)} -- log[0] size: {len(logs[0]) if logs else 0}")
+
         # Auto-scroll vers le bas si activé
         if self.auto_scroll:
             self.logs_display.see(tk.END)

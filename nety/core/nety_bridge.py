@@ -18,6 +18,10 @@ class NetyBridge:
     _instance = None
     _lock = threading.Lock()
     
+    # Configuration des logs
+    MAX_LOGS = 5000  # Capacité maximale des logs (augmentée de 1000 à 5000)
+    LOGS_ROTATION_THRESHOLD = 0.9  # Rotation à 90% de capacité
+    
     def __new__(cls):
         if cls._instance is None:
             with cls._lock:
@@ -34,9 +38,10 @@ class NetyBridge:
         self.to_nety_queue = queue.Queue()        # Dashboard → IA
         self.from_nety_queue = queue.Queue()      # IA → Dashboard
         
-        # Logs partagés (thread-safe)
+        # Logs partagés (thread-safe) avec gestion améliorée
         self.logs: List[str] = []
         self.logs_lock = threading.Lock()
+        self.logs_rotation_count = 0  # Suivi des rotations
         
         # État du système
         self.system_running = False
@@ -145,21 +150,35 @@ class NetyBridge:
     # 📝 GESTION DES LOGS (Thread-Safe)
     # ==========================================
     def _add_log(self, message: str):
-        """Ajoute un log de manière thread-safe"""
+        """
+        Ajoute un log de manière thread-safe avec gestion intelligente de rotation
+        
+        Stratégie: Quand on atteint 90% de capacité, garder les 75% les plus récents
+        (supprimer les 25% les plus anciens) pour éviter les tronquages soudains
+        """
         with self.logs_lock:
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             log_entry = f"[{timestamp}] {message}"
             self.logs.append(log_entry)
             
-            # Limiter à 1000 logs
-            if len(self.logs) > 1000:
-                self.logs.pop(0)
+            # Gestion intelligente de la capacité
+            current_capacity_ratio = len(self.logs) / self.MAX_LOGS
+            if current_capacity_ratio >= self.LOGS_ROTATION_THRESHOLD:
+                # Garder les 75% les plus récents (supprimer les 25% les plus anciens)
+                remove_count = len(self.logs) // 4
+                self.logs = self.logs[remove_count:]
+                self.logs_rotation_count += 1
+                rotation_msg = f"[{timestamp}] 🔄 Rotation logs #{self.logs_rotation_count} (gardé {len(self.logs)}/{self.MAX_LOGS})"
+                self.logs.append(rotation_msg)
             
             # Aussi afficher dans la console
             print(log_entry)
     
     def get_logs(self) -> List[str]:
-        """Récupère tous les logs (thread-safe)"""
+        """
+        Récupère tous les logs (thread-safe)
+        IMPORTANT: Retourne la totalité des logs actuellement en mémoire
+        """
         with self.logs_lock:
             return self.logs.copy()
     
@@ -167,7 +186,23 @@ class NetyBridge:
         """Efface les logs"""
         with self.logs_lock:
             self.logs.clear()
+            self.logs_rotation_count = 0
             self._add_log("🗑️ Logs effacés")
+    
+    def get_logs_stats(self) -> Dict[str, Any]:
+        """
+        Retourne les statistiques détaillées des logs (diagnostic)
+        Utile pour monitorer la santé du système de logs
+        """
+        with self.logs_lock:
+            return {
+                "total_logs": len(self.logs),
+                "max_capacity": self.MAX_LOGS,
+                "capacity_used_percent": (len(self.logs) / self.MAX_LOGS) * 100,
+                "rotation_count": self.logs_rotation_count,
+                "first_log": self.logs[0] if self.logs else None,
+                "last_log": self.logs[-1] if self.logs else None
+            }
     
     # ==========================================
     # 🔧 GESTION DES MODULES (Thread-Safe)
@@ -215,11 +250,14 @@ class NetyBridge:
     # 📈 STATISTIQUES
     # ==========================================
     def get_stats(self) -> Dict[str, Any]:
-        """Retourne les statistiques du système"""
+        """Retourne les statistiques du système avec détails des logs"""
+        logs_stats = self.get_logs_stats()
         return {
             "messages_sent": self.messages_sent,
             "messages_received": self.messages_received,
-            "logs_count": len(self.logs),
+            "logs_count": logs_stats["total_logs"],
+            "logs_capacity_percent": logs_stats["capacity_used_percent"],
+            "logs_rotations": logs_stats["rotation_count"],
             "system_running": self.system_running,
             "brain_ready": self.brain_initialized,
             "modules_count": len(self.modules_status)

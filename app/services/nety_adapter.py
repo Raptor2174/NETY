@@ -86,12 +86,29 @@ class NetyAdapter:
     # 📝 LOGS
     # ==========================================
     def get_logs(self) -> List[str]:
-        """Récupère tous les logs depuis le Bridge"""
+        """
+        Récupère tous les logs depuis le Bridge
+        
+        GARANTIE: Retourne la totalité des logs actuellement en mémoire.
+        - Capacité max: 5000 logs
+        - Rotation intelligente: À 90% de capacité, garde les 75% les plus récents
+        - Tous les logs incluent timestamp et sont thread-safe
+        
+        Returns:
+            List[str]: Tous les logs disponibles (jamais tronqués)
+        """
         return bridge.get_logs()
     
     def clear_logs(self):
         """Efface les logs"""
         bridge.clear_logs()
+    
+    def get_logs_diagnostics(self) -> Dict:
+        """
+        Retourne les diagnostics détaillés du système de logs
+        Utile pour débugger les problèmes de logs tronqués
+        """
+        return bridge.get_logs_stats()
     
     # ==========================================
     # 🔧 ÉTAT DU SYSTÈME
