@@ -150,7 +150,8 @@ class Brain:
         if not user_name:
             user_name = ml_profile.get("name")
 
-        personal_memories = self.ml_engine.get_relevant_memories(message)
+        # ✨ UTILISER LA NOUVELLE MÉTHODE DE RÉCUPÉRATION DE MÉMOIRES AVEC CONTEXTE
+        personal_memories = self.ml_engine.get_relevant_memories(message, limit=10)
         
         # ✅ CHARGER LES KEY_INFO (identité, rôles, etc.)
         key_infos = self.ml_engine.load_key_info()
@@ -164,12 +165,45 @@ class Brain:
             "history": self.context_history[-5:],
             "knowledge": knowledge_data,
             "user_name": user_name,  # ✅ Info clé extraite
-            "personal_memory": personal_memories,
+            "personal_memory": personal_memories,  # ✨ Mémoires améliorées avec labels et corrélations
             "user_profile": ml_profile,
             "key_infos": key_infos,  # ✅ Infos clés (identité, rôles)
-            "user_id": user_id  # ✅ ID utilisateur détecté
+            "user_id": user_id,  # ✅ ID utilisateur détecté
+            "memory_context": {  # ✨ Contexte de mémoire enrichi
+                "recent_labels": self._extract_memory_labels(personal_memories),
+                "memory_sentiment": self._extract_memory_sentiment(personal_memories),
+            }
         }
         return context
+    
+    def _extract_memory_labels(self, memories: list) -> list:
+        """Extrait les labels des souvenirs pour enrichir le contexte"""
+        labels = set()
+        for memory in memories:
+            if isinstance(memory, dict) and "labels" in memory:
+                labels.update(memory.get("labels", []))
+        return list(labels)
+    
+    def _extract_memory_sentiment(self, memories: list) -> str:
+        """Détermine le sentiment global des souvenirs récents"""
+        sentiments = []
+        for memory in memories:
+            if isinstance(memory, dict) and "meta" in memory:
+                sent = memory.get("meta", {}).get("sentiment", "neutral")
+                sentiments.append(sent)
+        
+        if not sentiments:
+            return "neutral"
+        
+        pos = sentiments.count("positive")
+        neg = sentiments.count("negative")
+        
+        if pos > neg:
+            return "positive"
+        elif neg > pos:
+            return "negative"
+        else:
+            return "neutral"
     
     def process_message(self, message: str) -> str:
         """Pipeline complet de traitement"""
@@ -217,12 +251,28 @@ class Brain:
             message, context, personality_filter
         )
 
-        # [4.5] Ingestion ML (mémoire personnelle) avec user_id détecté
+        # [4.5] Ingestion ML (mémoire personnelle) avec user_id détecté et labels
         try:
             user_id = context.get("user_id")
             if user_id:
                 print(f"👤 Utilisateur identifié: {user_id}")
-            self.ml_engine.ingest_text(message, user_id=user_id)
+            
+            # ✨ Utiliser la nouvelle méthode avec labels et corrélations
+            memory_entry = self.ml_engine.assign_memory_labels(message, user_id=user_id)
+            
+            # Enregistrer dans la mémoire locale avec labels
+            if self.memory:
+                memory_id = self.memory.add_memory(
+                    message[:100],  # Résumé court
+                    labels=memory_entry.get("labels", ["other"]),
+                    metadata={
+                        "user_id": user_id,
+                        "categories": memory_entry.get("categories", []),
+                        "sentiment": memory_entry.get("meta", {}).get("sentiment", "neutral"),
+                        "keywords": memory_entry.get("keywords", [])[:5]
+                    }
+                )
+            
             stats = self.ml_engine.get_stats()
             if stats.get("total_entries", 0) % 20 == 0:
                 self.ml_engine.train_from_memory()

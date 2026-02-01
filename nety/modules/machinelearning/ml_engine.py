@@ -346,19 +346,37 @@ class MLEngine:
         return self.CATEGORY_LABELS[int(predicted)]
 
     def get_relevant_memories(self, query: str, limit: int = 5) -> List[Dict]:
+        """
+        Récupère les souvenirs pertinents en priorisant:
+        1. Les dernières interactions
+        2. Les correspondances de mots-clés
+        3. Les faits corrélés
+        """
         keywords = set(self._extract_keywords(query))
-        if not keywords:
+        all_memories = self._load_memory(limit=None)
+        
+        if not all_memories:
             return []
 
-        scored: List[Tuple[int, Dict]] = []
-        for entry in self._load_memory(limit=200):
+        scored: List[Tuple[int, Dict, int]] = []  # (score, entry, recency)
+        
+        for idx, entry in enumerate(all_memories):
+            recency_score = idx  # Plus l'index est élevé, plus récent
             entry_keywords = set(entry.get("keywords", []))
-            score = len(keywords.intersection(entry_keywords))
-            if score > 0:
-                scored.append((score, entry))
+            keyword_score = len(keywords.intersection(entry_keywords))
+            
+            # Score des faits corrélés
+            facts_score = len(entry.get("facts", {}).values()) if entry.get("facts") else 0
+            
+            # Score total: recency + keywords + facts
+            total_score = (recency_score * 2) + keyword_score + facts_score
+            
+            if total_score > 0 or idx >= len(all_memories) - 5:  # Inclure les 5 derniers
+                scored.append((total_score, entry, recency_score))
 
-        scored.sort(key=lambda item: item[0], reverse=True)
-        return [entry for _, entry in scored[:limit]]
+        # Trier par score décroissant (récents d'abord)
+        scored.sort(key=lambda item: (item[0], item[2]), reverse=True)
+        return [entry for _, entry, _ in scored[:limit]]
 
     def get_user_profile(self, user_id: Optional[str] = None) -> Dict[str, str]:
         profile: Dict[str, str] = {}
@@ -424,6 +442,144 @@ class MLEngine:
     # ==========================================
     # 🧠 MÉTHODES ML ORIGINALES
     # ==========================================
+    
+    def assign_memory_labels(self, text: str, user_id: Optional[str] = None) -> Dict:
+        """
+        Assigne des labels contextuels aux souvenirs et enregistre les corrélations.
+        Améliore le système en catégorisant les interactions et en créant des liens.
+        """
+        analysis = self.extract_key_info(text)
+        
+        # Déterminer les labels contextuels
+        labels = []
+        if "name" in analysis["facts"]:
+            labels.append("identity_info")
+        if analysis["keywords"] and any(word in ["aime", "préfère", "adore"] for word in analysis["keywords"]):
+            labels.append("preference")
+        if "goals" in analysis["categories"]:
+            labels.append("goal")
+        if "health" in analysis["categories"]:
+            labels.append("health_update")
+        if len(text.split()) > 50:
+            labels.append("detailed_context")
+        else:
+            labels.append("short_interaction")
+        
+        # Créer l'entrée mémoire enrichie avec labels
+        entry = {
+            "id": f"{datetime.utcnow().isoformat()}-{len(text)}",
+            "timestamp": datetime.utcnow().isoformat(),
+            "text": text,
+            "facts": analysis["facts"],
+            "categories": analysis["categories"],
+            "keywords": analysis["keywords"],
+            "user_id": user_id,
+            "labels": labels,  # ✨ Nouveaux labels contextuels
+            "meta": {
+                "sentiment": self._analyze_sentiment(text),
+                "urgency": self._determine_urgency(text),
+            },
+        }
+        
+        self._append_memory(entry)
+        self._update_stats(entry)
+        
+        # Enregistrer les corrélations entre les informations clés
+        self._store_correlations(entry, user_id)
+        
+        return entry
+    
+    def _analyze_sentiment(self, text: str) -> str:
+        """Analyse le sentiment du texte"""
+        positive_words = ["merci", "super", "génial", "content", "heureux", "aime", "formidable", "excellent", "cool"]
+        negative_words = ["triste", "nul", "mauvais", "déçu", "horrible", "déteste", "frustré", "angry"]
+        
+        text_lower = text.lower()
+        pos = sum(1 for word in positive_words if word in text_lower)
+        neg = sum(1 for word in negative_words if word in text_lower)
+        
+        if pos > neg:
+            return "positive"
+        elif neg > pos:
+            return "negative"
+        else:
+            return "neutral"
+    
+    def _determine_urgency(self, text: str) -> str:
+        """Détermine le niveau d'urgence"""
+        urgent_words = ["urgent", "aide", "problème", "bug", "crash", "immédiatement", "vite", "rapidement"]
+        text_lower = text.lower()
+        
+        if any(word in text_lower for word in urgent_words):
+            return "high"
+        elif "bientôt" in text_lower or "à faire" in text_lower:
+            return "medium"
+        else:
+            return "low"
+    
+    def _store_correlations(self, current_entry: Dict, user_id: Optional[str] = None) -> None:
+        """
+        Enregistre les corrélations entre les informations clés et les interactions précédentes.
+        Crée des liens sémantiques entre les souvenirs.
+        """
+        key_info_path = os.path.join(self.data_dir, "key_info.jsonl")
+        current_facts = current_entry.get("facts", {})
+        
+        if not current_facts:
+            return
+        
+        # Créer une corrélation pour chaque fait important
+        for field, values in current_facts.items():
+            for value in values:
+                correlation = {
+                    "type": "correlation",
+                    "field": field,
+                    "value": value,
+                    "user_id": user_id,
+                    "memory_id": current_entry["id"],
+                    "timestamp": current_entry["timestamp"],
+                    "category": current_entry.get("categories", ["other"])[0],
+                    "labels": current_entry.get("labels", []),
+                    "sentiment": current_entry.get("meta", {}).get("sentiment", "neutral"),
+                }
+                
+                with open(key_info_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(correlation, ensure_ascii=False) + "\n")
+    
+    def get_memory_with_context(self, user_id: Optional[str] = None, limit: int = 10) -> List[Dict]:
+        """
+        Récupère les souvenirs d'un utilisateur avec le contexte complet:
+        - Dernières interactions
+        - Labels et corrélations associées
+        - Faits clés avec sentiment
+        """
+        memories = self._load_memory(limit=None)
+        user_memories = []
+        
+        for entry in reversed(memories):  # Récent d'abord
+            if user_id is None or entry.get("user_id") == user_id:
+                user_memories.append(entry)
+        
+        return user_memories[:limit]
+    
+    def get_related_memories(self, memory_id: str) -> List[Dict]:
+        """
+        Récupère tous les souvenirs corrélés à une entrée mémoire spécifique.
+        Utile pour reconstituer le contexte complet d'une interaction.
+        """
+        key_info = self.load_key_info()
+        related_ids = set()
+        
+        # Trouver tous les liens de corrélation vers ce memory_id
+        for info in key_info:
+            if info.get("type") == "correlation" and info.get("memory_id") == memory_id:
+                related_ids.add(info.get("memory_id"))
+        
+        all_memories = self._load_memory()
+        related = [m for m in all_memories if m.get("id") in related_ids]
+        
+        return related
+
     def train(self, data, labels, epochs: int = 10, learning_rate: float = 0.01):
         """Entraîne le modèle (API brute)"""
         optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
