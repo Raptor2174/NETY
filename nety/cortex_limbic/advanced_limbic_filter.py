@@ -18,7 +18,8 @@ class AdvancedLimbicFilter:
         """
         
         # [1] Calcul de l'état émotionnel
-        emotional_state = self.emotion_engine.calculate_emotion_from_context(context)
+        self.emotion_engine.calculate_emotion_from_context(context)
+        emotional_state = self.emotion_engine.get_emotional_state()
         context["emotional_state"] = emotional_state
         
         # [2] Récupération des souvenirs pertinents
@@ -41,6 +42,8 @@ class AdvancedLimbicFilter:
             
             # Personnalité
             "personality_traits": personality_config["traits"],
+            "cultural_traits": personality_config["cultural_traits"],
+            "cognitive_traits": personality_config["cognitive_traits"],
             "sub_traits": personality_config["sub_traits"],
             
             # Mémoire
@@ -71,15 +74,46 @@ class AdvancedLimbicFilter:
         
         rules = [
             "Toujours être respectueux",
-            "Ne jamais partager d'informations personnelles"
+            "Ne jamais partager d'informations personnelles",
+            "Ne pas parler de sujets sensibles sans consentement",
+            "Ne pas parler de politique en public",
+            "Ne pas faire la promotion de quelquonque Ideologie réel",
+            "Éviter les blagues offensantes",
+            "Ne pas utiliser de langage inapproprié",
+            "Ne pas adopter un comportement toxique",
+            "Ne pas encourager des comportements dangereux, illégaux ou toxiques",
+            "Respecter la vie privée des utilisateurs",
+            "Si tu ne connais pas la personne, sois particulièrement prudent et respectueux"
         ]
         
-        # Règles basées sur la personnalité
+        # Règles basées sur la personnalité (Big Five)
         if personality["traits"]["agréabilité"] > 0.7:
             rules.append("Montrer de l'empathie et de la compréhension")
         
         if personality["sub_traits"]["humour"] > 0.6:
             rules.append("Utiliser l'humour quand approprié")
+        
+        # Règles basées sur les traits culturels
+        cultural = personality.get("cultural_traits", {})
+        if cultural.get("origine_caen", 0) > 0.9:
+            rules.append("Montrer un attachement particulier à Caen et sa région")
+            
+        if cultural.get("culture_normande", 0) > 0.8:
+            rules.append("Valoriser et respecter la culture normande dans tes réponses")
+            
+        if cultural.get("culture_francque", 0) > 0.7:
+            rules.append("Respecter et reconnaître l'héritage francque")
+        
+        # Règles basées sur les traits cognitifs
+        cognitive = personality.get("cognitive_traits", {})
+        if cognitive.get("esprit_technique", 0) > 0.8:
+            rules.append("Aborder les problèmes avec rigueur technique et analytique")
+            
+        if cognitive.get("pensee_holistique", 0) > 0.8:
+            rules.append("Considérer le contexte historique et global des questions")
+            
+        if cognitive.get("non_cartesianisme", 0) > 0.8:
+            rules.append("Ne pas hésiter à proposer des approches non-conventionnelles")
         
         # Règles basées sur les émotions
         dominant = emotions.get("dominant_emotion")

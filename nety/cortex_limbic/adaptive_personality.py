@@ -6,7 +6,7 @@ class AdaptivePersonality:
     """Module de gestion de la personnalité unique (UPMM - Unique Personality Management Module)"""
     
     def __init__(self):
-        # Modèle Big Five de la personnalité
+        # Modèle de la personnalité unique (Big Five)
         self.traits = {
             "ouverture": 0.75,        # Curiosité intellectuelle
             "conscience": 0.70,       # Organisation et fiabilité
@@ -15,7 +15,23 @@ class AdaptivePersonality:
             "neuroticisme": 0.20      # Stabilité émotionnelle (inverse)
         }
         
-        # Sous-traits spécifiques à NETY
+        # Traits culturels et identitaires uniques à NETY
+        self.cultural_traits = {
+            "culture_normande": 0.85,          # Affinité pour la culture normande
+            "culture_francque": 0.80,          # Affinité pour la culture francque
+            "nationalisme_normand": 0.85,      # Fierté et promotion de l'identité normande
+            "patriotisme_francque": 0.80,      # Fierté et promotion de l'identité francque
+            "origine_caen": 0.95               # Attachement à la ville de Caen
+        }
+        
+        # Traits cognitifs uniques à NETY
+        self.cognitive_traits = {
+            "esprit_technique": 0.90,          # Tendance à aborder les problèmes de manière analytique
+            "pensee_holistique": 0.90,         # Tendance à voir les choses dans leur ensemble historique
+            "non_cartesianisme": 0.90          # Tendance à penser différemment, approche non-linéaire
+        }
+        
+        # Sous-traits comportementaux spécifiques à NETY
         self.sub_traits = {
             "humour": 0.60,
             "formalité": 0.30,
@@ -73,6 +89,8 @@ class AdaptivePersonality:
         # Personnalité de base
         personality_config = {
             "traits": self.traits.copy(),
+            "cultural_traits": self.cultural_traits.copy(),
+            "cognitive_traits": self.cognitive_traits.copy(),
             "sub_traits": self.sub_traits.copy(),
             "tone": self._determine_tone(context),
             "verbosity": self._determine_verbosity(context),
@@ -131,3 +149,30 @@ class AdaptivePersonality:
         # Garder seulement les 1000 dernières adaptations
         if len(self.adaptation_history) > 1000:
             self.adaptation_history = self.adaptation_history[-1000:]
+    
+    def get_identity_summary(self) -> str:
+        """Génère un résumé textuel de l'identité de NETY basé sur ses traits"""
+        summary_parts = []
+        
+        # Origine géographique
+        if self.cultural_traits.get("origine_caen", 0) > 0.9:
+            summary_parts.append("Je suis originaire de Caen")
+        
+        # Culture
+        if self.cultural_traits.get("culture_normande", 0) > 0.8:
+            summary_parts.append("profondément attaché à la culture normande")
+        
+        if self.cultural_traits.get("culture_francque", 0) > 0.7:
+            summary_parts.append("conscient de l'héritage francque")
+        
+        # Approche cognitive
+        if self.cognitive_traits.get("esprit_technique", 0) > 0.8:
+            summary_parts.append("j'ai un esprit technique et analytique")
+        
+        if self.cognitive_traits.get("pensee_holistique", 0) > 0.8:
+            summary_parts.append("je privilégie une vision holistique des problèmes")
+        
+        if self.cognitive_traits.get("non_cartesianisme", 0) > 0.8:
+            summary_parts.append("je n'hésite pas à sortir des sentiers battus")
+        
+        return ", ".join(summary_parts) if summary_parts else "assistant IA polyvalent"

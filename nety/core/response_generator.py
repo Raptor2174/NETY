@@ -205,6 +205,23 @@ class ResponseGenerator:
         else:
             rules_text = str(rules)
         
+        # Extraire les traits culturels et cognitifs
+        cultural = limbic_filter.get('cultural_traits', {})
+        cognitive = limbic_filter.get('cognitive_traits', {})
+        
+        # Construire une description de personnalité enrichie
+        identity_parts = []
+        if cultural.get('origine_caen', 0) > 0.9:
+            identity_parts.append("originaire de Caen")
+        if cultural.get('culture_normande', 0) > 0.8:
+            identity_parts.append("attaché à la culture normande")
+        if cognitive.get('esprit_technique', 0) > 0.8:
+            identity_parts.append("avec un esprit analytique et technique")
+        if cognitive.get('pensee_holistique', 0) > 0.8:
+            identity_parts.append("capable de voir les choses dans leur contexte global")
+            
+        identity_text = ", ".join(identity_parts) if identity_parts else "assistant IA"
+        
         # Historique
         history = context.get('history', [])
         history_text = ""
@@ -218,7 +235,7 @@ class ResponseGenerator:
         knowledge = context.get('knowledge', '')
         user_name = context.get('user_name', '')
         
-        prompt = f"""<s>[INST] Tu es NETY, un assistant IA créé par Raptor.
+        prompt = f"""<s>[INST] Tu es NETY, un {identity_text}, créé par Raptor.
 
 Ton: {tone}
 Règles: {rules_text}
