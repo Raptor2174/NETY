@@ -163,6 +163,11 @@ class MLEngine:
         with open(self.memory_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
+    def _append_key_info(self, key_info: Dict) -> None:
+        key_info_path = os.path.join(self.data_dir, "key_info.jsonl")
+        with open(key_info_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(key_info, ensure_ascii=False) + "\n")
+
     def _load_memory(self, limit: Optional[int] = None) -> List[Dict]:
         if not os.path.exists(self.memory_path):
             return []
@@ -178,6 +183,13 @@ class MLEngine:
         if limit is not None:
             return entries[-limit:]
         return entries
+
+    def load_key_info(self) -> List[Dict]:
+        key_info_path = os.path.join(self.data_dir, "key_info.jsonl")
+        if not os.path.exists(key_info_path):
+            return []
+        with open(key_info_path, "r", encoding="utf-8") as f:
+            return [json.loads(line) for line in f if line.strip()]
 
     def get_stats(self) -> Dict:
         if not os.path.exists(self.stats_path):
@@ -238,6 +250,26 @@ class MLEngine:
         }
         self._append_memory(entry)
         self._update_stats(entry)
+
+        # Ajout de key_info corrélée si applicable
+        if "name" in analysis["facts"] and user_id:
+            key_info = {
+                "type": "user_identity",
+                "user_id": user_id,
+                "identity": analysis["facts"]["name"][0],
+                "timestamp": entry["timestamp"],
+            }
+            self._append_key_info(key_info)
+        if "role" in analysis["facts"] and user_id:
+            key_info = {
+                "type": "user_role",
+                "user_id": user_id,
+                "roles": analysis["facts"]["role"],
+                "timestamp": entry["timestamp"],
+            }
+            self._append_key_info(key_info)
+        # ...ajoute d'autres corrélations/relations si besoin
+
         return entry
 
     def _update_stats(self, entry: Dict) -> None:

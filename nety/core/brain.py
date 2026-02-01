@@ -81,6 +81,19 @@ class Brain:
         
         return response
     
+    def _identify_user(self) -> Optional[str]:
+        """Identifie l'utilisateur basé sur les key_info.jsonl"""
+        try:
+            key_infos = self.ml_engine.load_key_info()
+            if key_infos:
+                # Chercher la dernière identité enregistrée
+                for key_info in reversed(key_infos):
+                    if key_info.get("type") == "user_identity":
+                        return key_info.get("user_id")
+        except Exception as e:
+            print(f"⚠️ Erreur lors de l'identification utilisateur: {e}")
+        return None
+
     def retrieve_context(self, message: str, intent: dict) -> dict:
         """Récupère le contexte basé sur le message et l'intention"""
         
@@ -112,6 +125,12 @@ class Brain:
             user_name = ml_profile.get("name")
 
         personal_memories = self.ml_engine.get_relevant_memories(message)
+        
+        # ✅ CHARGER LES KEY_INFO (identité, rôles, etc.)
+        key_infos = self.ml_engine.load_key_info()
+        
+        # ✅ DÉTECTER L'UTILISATEUR POUR LE USER_ID
+        user_id = self._identify_user()
 
         context = {
             "message": message,
@@ -120,7 +139,9 @@ class Brain:
             "knowledge": knowledge_data,
             "user_name": user_name,  # ✅ Info clé extraite
             "personal_memory": personal_memories,
-            "user_profile": ml_profile
+            "user_profile": ml_profile,
+            "key_infos": key_infos,  # ✅ Infos clés (identité, rôles)
+            "user_id": user_id  # ✅ ID utilisateur détecté
         }
         return context
     
@@ -141,9 +162,12 @@ class Brain:
             message, context, personality_filter
         )
 
-        # [4.5] Ingestion ML (mémoire personnelle)
+        # [4.5] Ingestion ML (mémoire personnelle) avec user_id détecté
         try:
-            self.ml_engine.ingest_text(message, user_id=context.get("user_id"))
+            user_id = context.get("user_id")
+            if user_id:
+                print(f"👤 Utilisateur identifié: {user_id}")
+            self.ml_engine.ingest_text(message, user_id=user_id)
             stats = self.ml_engine.get_stats()
             if stats.get("total_entries", 0) % 20 == 0:
                 self.ml_engine.train_from_memory()
