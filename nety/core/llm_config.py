@@ -81,6 +81,32 @@ class LLMConfig:
             "context_length": 2048,
         }
     }
+
+    # ═══════════════════════════════════════════════════
+    # RNN LOCAL (OPTION 4) - NOUVEAU !
+    # ═══════════════════════════════════════════════════
+
+    RNN_CONFIG = {
+        "enabled": True,
+        "name": "RNN Local - TextualCortex",
+        "type": "LOCAL",
+        "description": "🧪 EXPÉRIMENTAL - RNN bi-directionnel entraîné localement",
+        "speed": "Rapide",
+        "quality": "En apprentissage",
+        "ram": "500 MB",
+        "device": "CPU/GPU",
+        "vocab_size": 2000,
+        "max_length": 50,
+        "temperature": 0.8,
+    }
+
+    # Modèles disponibles
+    AVAILABLE_MODELS = {
+        "mistral": MODELS["mistral"],
+        "bloomz": MODELS["bloomz"],
+        "groq": GROQ_CONFIG,
+        "rnn": RNN_CONFIG,  # ✨ NOUVEAU
+    }
     
     CURRENT_MODEL = "mistral"
     

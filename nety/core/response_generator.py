@@ -7,6 +7,7 @@ import requests
 import os
 from dotenv import load_dotenv
 from typing import Optional, Dict
+from nety.core.rnn_response_generator import RNNResponseGenerator
 
 # ✅ CHARGER .env IMMÉDIATEMENT (avant tout import de config)
 load_dotenv()
@@ -19,7 +20,7 @@ class ResponseGenerator:
         Initialise le générateur
         
         Args:
-            model_type: "mistral", "bloomz", "groq"
+            model_type: "mistral", "bloomz", "groq", "rnn"
             force_backend: Force un backend spécifique
         """
         
@@ -37,6 +38,12 @@ class ResponseGenerator:
         self.pipeline = None
         self.tokenizer = None
         self.model_config = None  # ⚠️ FIX: Peut être None pour cloud
+
+        # ✨ AJOUT DU BACKEND RNN
+        self.rnn_generator = None
+        if self.model_type == "rnn":
+            print("🧠 Initialisation du générateur RNN local...")
+            self.rnn_generator = RNNResponseGenerator()
         
         print(f"🤖 Initialisation du générateur ({self.model_type})...")
         
@@ -44,7 +51,11 @@ class ResponseGenerator:
         # DÉCIDER DU BACKEND À CHARGER
         # ═══════════════════════════════════════════════════
         
-        if self.model_type == "groq":
+        if self.model_type == "rnn":
+            # Backend RNN local
+            print("✅ RNN local prêt!")
+
+        elif self.model_type == "groq":
             # Backend Groq Cloud
             print("🌐 Chargement du backend Groq Cloud...")
             if not self._init_groq():
@@ -59,7 +70,7 @@ class ResponseGenerator:
             print("✅ Modèle local chargé!")
         
         else:
-            raise ValueError(f"Backend inconnu: {self.model_type}. Utilise 'mistral', 'bloomz', ou 'groq'.")
+            raise ValueError(f"Backend inconnu: {self.model_type}. Utilise 'mistral', 'bloomz', 'groq', ou 'rnn'.")
     
     # ═══════════════════════════════════════════════════
     # GROQ BACKEND
@@ -157,7 +168,13 @@ class ResponseGenerator:
             limbic_filter = {'tone': 'friendly', 'behavior_rules': []}
         
         # Construire le prompt
-        if self.model_type == "groq":
+        if self.model_type == "rnn":
+            print("🧠 Utilisation du RNN local...")
+            if self.rnn_generator is None:
+                raise RuntimeError("Générateur RNN non initialisé")
+            return self.rnn_generator.generate(message, context, limbic_filter)
+
+        elif self.model_type == "groq":
             # Prompt simple pour Groq
             prompt = self._build_simple_prompt(message, context, limbic_filter)
             print("🌐 Utilisation de Groq Cloud...")
@@ -201,65 +218,18 @@ class ResponseGenerator:
         return "\n".join(parts)
     
     def _build_simple_prompt(self, message: str, context: Dict, limbic_filter: Dict) -> str:
-        """Prompt enrichi pour Groq avec mémoire complète"""
-        parts = []
-
-        # 🆕 Ajouter les KEY_INFO
-        key_infos = context.get('key_infos', [])
-        if key_infos:
-            parts.append("=== Informations clés sur l'utilisateur ===")
-            for info in key_infos:
-                if info.get("type") == "correlation":
-                    parts.append(f"{info['field']}: {info['value']}")
-            parts.append("")
-
-        # 🆕 Ajouter l'état émotionnel
-        emotional_state = limbic_filter.get('emotional_state', {})
-        if emotional_state:
-            dominant = emotional_state.get('dominant_emotion', 'neutre')
-            intensity = emotional_state.get('intensity', 0.0)
-            parts.append("=== État émotionnel de NETY ===")
-            parts.append(f"Émotion dominante: {dominant} (intensité: {intensity:.2f})")
-
-            all_emotions = emotional_state.get('all_emotions', {})
-            parts.append("Toutes les émotions:")
-            for emotion, value in all_emotions.items():
-                parts.append(f"- {emotion}: {value:.2f}")
-            parts.append("")
-
-        # 🆕 Ajouter les traits culturels
-        cultural = limbic_filter.get('cultural_traits', {})
-        if cultural:
-            parts.append("=== Traits culturels de NETY ===")
-            for trait, value in cultural.items():
-                if value > 0.5:
-                    parts.append(f"- {trait}: {value:.2f}")
-            parts.append("")
-
-        # Historique
-        history = context.get('history', [])
-        if history:
-            parts.append("=== Contexte récent ===")
-            for interaction in history[-2:]:
-                parts.append(f"User: {interaction.get('input', '')}")
-                parts.append(f"NETY: {interaction.get('output', '')}")
-            parts.append("")
-
-        # Mémoire (AUGMENTER À 10 AU LIEU DE 3)
-        memories = context.get("personal_memory", [])
-        if memories:
-            parts.append("=== Souvenirs pertinents ===")
-            for mem in memories[:10]:
-                text = mem.get("text", "")
-                categories = mem.get("categories", [])
-                if text:
-                    parts.append(f"- {text} [Catégories: {', '.join(categories)}]")
-            parts.append("")
-
-        # Message actuel
-        parts.append(f"User: {message}")
-
-        return "\n".join(parts)
+        """Prompt adaptatif intelligent"""
+        from nety.core.smart_prompt_builder import SmartPromptBuilder
+        
+        builder = SmartPromptBuilder()
+        prompt, estimated_tokens = builder.build_prompt(
+            message, context, limbic_filter, level="auto"
+        )
+        
+        # Log pour monitoring
+        print(f"📊 Prompt niveau: {builder.detect_prompt_level(message)} (~{estimated_tokens} tokens)")
+        
+        return prompt
     
     def _build_mistral_prompt(self, message: str, context: Dict, limbic_filter: Dict) -> str:
         """Prompt détaillé pour Mistral"""
@@ -490,7 +460,11 @@ R:"""
     
     def get_model_info(self) -> dict:
         """Retourne les informations du modèle actuel"""
-        if self.model_type == "groq":
+        if self.model_type == "rnn":
+            if self.rnn_generator is None:
+                return {"backend": "RNN local", "model": "Inconnu"}
+            return self.rnn_generator.get_model_info()
+        elif self.model_type == "groq":
             model = self.config.GROQ_CONFIG["default_model"]
             return {
                 "backend": "Groq Cloud",

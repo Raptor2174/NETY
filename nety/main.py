@@ -3,7 +3,6 @@ from nety.core.brain import Brain
 from nety.core.config import Config
 from nety.core.system_init import initialize_system
 from nety.core.nety_bridge import bridge  # ← NOUVEAU
-from nety.core.model_selector import select_model
 
 
 class BoucleSettings:
@@ -219,7 +218,7 @@ class NETYSystem:
 def main():
     """Fonction principale - Point d'entrée pour console_scripts"""
     # Demander à l'utilisateur quel modèle
-    chosen_model = select_model(interactive=True)
+    chosen_model = select_model_interactive()
     
     # Créer le système avec le modèle choisi
     system = NETYSystem(model_type=chosen_model)
@@ -233,3 +232,96 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def select_model_interactive():
+    """Menu interactif de sélection de modèle"""
+
+    print("\n" + "="*70)
+    print("🤖 SÉLECTION DU MODÈLE D'IA POUR NETY")
+    print("="*70 + "\n")
+
+    models = [
+        {
+            "name": "Mistral-7B (Local GPU - Puissant mais gourmand)",
+            "type": "LOCAL",
+            "key": "mistral",
+            "cost": "Gratuit (utilise ton matériel)",
+            "internet": "Non requis",
+            "speed": "Moyen (dépend GPU)",
+            "quality": "Excellent",
+            "ram": "8 GB + 4 GB VRAM (GPU)",
+            "note": "⚠️ Nécessite un GPU compatible CUDA"
+        },
+        {
+            "name": "BLOOMZ-560M (Local CPU - Léger et rapide)",
+            "type": "LOCAL",
+            "key": "bloomz",
+            "cost": "Gratuit (utilise ton matériel)",
+            "internet": "Non requis",
+            "speed": "Rapide (CPU uniquement)",
+            "quality": "Correct",
+            "ram": "2 GB",
+            "note": ""
+        },
+        {
+            "name": "Groq Cloud - Llama 3.3 (Cloud ultra rapide)",
+            "type": "CLOUD",
+            "key": "groq",
+            "cost": "Gratuit (14.4k req/jour)",
+            "internet": "Requis",
+            "speed": "⚡⚡⚡ Ultra rapide (500 tok/sec)",
+            "quality": "Excellent",
+            "ram": "0 GB (cloud)",
+            "note": ""
+        },
+        # ✨ NOUVEAU
+        {
+            "name": "RNN Local - TextualCortex (Expérimental)",
+            "type": "LOCAL",
+            "key": "rnn",
+            "cost": "Gratuit (utilise ton matériel)",
+            "internet": "Non requis",
+            "speed": "Rapide (CPU/GPU)",
+            "quality": "🧪 En apprentissage",
+            "ram": "500 MB",
+            "note": "🔬 Mode test - Pour observer les progrès du RNN"
+        },
+    ]
+
+    # Afficher les options
+    for i, model in enumerate(models, 1):
+        print(f"{i}. {model['name']}")
+        print(f"   Type: {model['type']}")
+        print(f"   💰 {model['cost']}")
+        print(f"   📶 {model['internet']}")
+        print(f"   ⚡ {model['speed']}")
+        print(f"   🧠 {model['quality']}")
+        print(f"   💾 RAM: {model['ram']}")
+        if model['note']:
+            print(f"   {model['note']}")
+        print()
+
+    print("💡 Recommandations:")
+    print("   • Pas de GPU → BLOOMZ (option 2)")
+    print("   • GPU disponible → Mistral (option 1)")
+    print("   • PC faible + internet → Groq (option 3)")
+    print("   • Tester le RNN local → RNN (option 4) 🧪")
+    print()
+
+    # Sélection
+    while True:
+        try:
+            choice = input("👉 Choisis ton modèle (1, 2, 3 ou 4): ").strip()
+            choice_int = int(choice)
+            if 1 <= choice_int <= len(models):
+                selected = models[choice_int - 1]
+                print(f"\n✅ Modèle sélectionné: {selected['name']}\n")
+                return selected['key']
+            else:
+                print(f"❌ Choix invalide. Entre un nombre entre 1 et {len(models)}.")
+        except ValueError:
+            print("❌ Entrée invalide. Entre un nombre.")
+        except KeyboardInterrupt:
+            print("\n\n👋 Annulation...")
+            exit(0)
