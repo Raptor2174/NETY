@@ -1,35 +1,42 @@
-# NETY - Requirements
+# NETY - Requirements Optimisés
 # Python 3.12+
 
-# Deep Learning Framework - PyTorch (Primary)
+# ============================================================================
+# CORE DEPENDENCIES - Essentiels pour le fonctionnement
+# ============================================================================
+
+# Deep Learning Framework - PyTorch (RNN/Neural Cortex)
 torch>=2.1.0
-torchvision>=0.16.0
-torchaudio>=2.1.0
-torchtext>=0.16.0
 
-# Audio Processing
-librosa>=0.10.1
-pyttsx3>=2.90
+# Math & Embeddings
+numpy>=1.26.0
 
-# Natural Language Processing
-spacy>=3.7.0
-# Pour installer le modèle français: python -m spacy download fr_core_news_sm
-
-# Knowledge Base - Databases
+# Knowledge Base & Vector Database
 chromadb>=0.4.0
 sentence-transformers>=2.2.0
 
+# ============================================================================
+# DEVELOPMENT & TESTING
+# ============================================================================
 
-# LLM - Mistral-7B (si vous avai +16GO de RAM GPU)
-transformers>=4.36.0
-accelerate>=0.25.0
-bitsandbytes>=0.41.0
-sentencepiece>=0.1.99
-
-# Development and Testing
 pytest>=7.4.3
 flake8>=6.1.0
 
-# Utilities
-numpy>=1.26.0
+# ============================================================================
+# OPTIONNEL - Décommentez si vous avez besoin de LLM avancés
+# ============================================================================
+
+# Transformers légers (pour LLM optionnels)
+# transformers>=4.36.0
+# 
+# Optimisations GPU (si GPU >16GB RAM)
+# accelerate>=0.25.0
+# bitsandbytes>=0.41.0
+# 
+# Traitement audio (si besoin future)
+# librosa>=0.10.1
+# pyttsx3>=2.90
+# 
+# NLP français (si intégration spaCy future)
+# spacy>=3.7.0
 
