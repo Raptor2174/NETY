@@ -1,12 +1,12 @@
 {
-  "total_entries": 345,
+  "total_entries": 470,
   "category_counts": {
-    "other": 317,
+    "other": 442,
     "identity": 18,
     "preferences": 6,
     "goals": 3,
     "work": 2,
     "contact": 1
   },
-  "last_train_at": "2026-02-03T11:00:57.298020"
+  "last_train_at": "2026-02-03T11:35:41.474605"
 }
