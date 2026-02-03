@@ -250,6 +250,20 @@ class AttentionMechanism(nn.Module):
         
         # Masquer si nécessaire
         if mask is not None:
+            # S'assurer que le masque a la bonne shape (batch, seq_len)
+            if mask.dim() == 1:
+                mask = mask.unsqueeze(0)  # (seq_len,) -> (1, seq_len)
+            # Broadcaster le masque si nécessaire
+            if mask.size(0) == 1 and attention_scores.size(0) > 1:
+                mask = mask.expand(attention_scores.size(0), -1)
+            # Vérifier que les dimensions correspondent
+            if mask.size(1) != attention_scores.size(1):
+                # Pad ou truncate le masque
+                if mask.size(1) < attention_scores.size(1):
+                    pad_size = attention_scores.size(1) - mask.size(1)
+                    mask = torch.cat([mask, torch.ones_like(mask[:, :pad_size])], dim=1)
+                else:
+                    mask = mask[:, :attention_scores.size(1)]
             attention_scores = attention_scores.masked_fill(mask, -1e10)
         
         # Softmax pour obtenir poids d'attention
@@ -471,7 +485,10 @@ class NETYBrainV2(nn.Module):
             
             # Créer mask pour attention (True = padding)
             if encoder_mask is not None:
-                attn_mask = (encoder_mask == 0)
+                # S'assurer que encoder_mask a la bonne shape (batch, seq_len)
+                if encoder_mask.dim() == 1:
+                    encoder_mask = encoder_mask.unsqueeze(0)
+                attn_mask = (encoder_mask == 0)  # True pour les tokens à ignorer (padding)
             else:
                 attn_mask = None
             

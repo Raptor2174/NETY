@@ -345,7 +345,7 @@ class NETYSettings:
         print(f"  {self.description}")
         print("=" * 80)
         
-        print("\n📊 HARDWARE")
+        print("\n[HARDWARE]")
         print(f"  GPU: {self.hardware.gpu_name} ({self.hardware.total_vram_gb} GB VRAM)")
         print(f"  Device: {self.hardware.device}")
         print(f"  Mixed Precision: {'✓ Enabled (FP16)' if self.hardware.enable_mixed_precision else '✗ Disabled'}")
