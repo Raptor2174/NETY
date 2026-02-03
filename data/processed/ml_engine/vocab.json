@@ -671,7 +671,8 @@
     "haut": 668,
     "sommet": 669,
     "découvert": 670,
-    "gravitation": 671
+    "gravitation": 671,
+    "va": 672
   },
   "idx_to_word": {
     "0": "<pad>",
@@ -1345,8 +1346,9 @@
     "668": "haut",
     "669": "sommet",
     "670": "découvert",
-    "671": "gravitation"
+    "671": "gravitation",
+    "672": "va"
   },
   "vocab_size": 2000,
-  "next_idx": 672
+  "next_idx": 673
 }

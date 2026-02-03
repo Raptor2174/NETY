@@ -99,7 +99,7 @@ class LLMConfig:
         "rnn": RNN_CONFIG,  # ✨ RNN local
     }
     
-    CURRENT_MODEL = "bloomz"
+    CURRENT_MODEL = "rnn"  # ✅ RNN LOCAL PAR DÉFAUT (pas BLOOMZ!)
     
     # Paramètres BLOOMZ
     BLOOMZ_GENERATION_CONFIG = {

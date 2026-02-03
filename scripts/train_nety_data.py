@@ -2,6 +2,7 @@ import json
 import random
 import time
 import sys
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -86,7 +87,8 @@ def train_cycle(brain: Brain) -> float:
     return correct / max(total, 1)
 
 def run_training():
-    brain = Brain()
+    # ✅ FORCER L'UTILISATION DU RNN LOCAL (pas BLOOMZ!)
+    brain = Brain(model_type="rnn")
     start = time.time()
     best_acc = 0.0
 
