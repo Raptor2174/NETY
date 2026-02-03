@@ -51,20 +51,29 @@ class RNNResponseGenerator:
         # Charger le modèle entraîné si disponible
         self._load_trained_model()
         
-        # ✨ NOUVEAU : Décodeur token-par-token pour génération textuelle
-        self.decoder = torch.nn.Sequential(
-            torch.nn.Linear(512, 1024),
-            torch.nn.ReLU(),
-            torch.nn.Dropout(0.3),
-            torch.nn.Linear(1024, max(self.vocab_size, 100)),  # Au moins 100 pour vocabulaire minimal
-            torch.nn.LogSoftmax(dim=-1)
+        # 🔥 NOUVEAU : Architecture Hybride RNN-Transformer
+        # RNN Encoder (existant via TextualCortex) + Transformer Decoder
+        from nety.modules.text.transformer_decoder import HybridRNNTransformer
+        
+        self.hybrid_model = HybridRNNTransformer(
+            vocab_size=max(self.vocab_size, 1000),  # Au moins 1000 pour un vocabulaire minimal
+            rnn_hidden_size=256,
+            rnn_num_layers=3,
+            rnn_num_heads=4,
+            decoder_d_model=512,
+            decoder_nhead=8,
+            decoder_num_layers=6,
+            decoder_dim_feedforward=2048,
+            dropout=0.1,
+            device=self.device
         ).to(self.device)
         
         print(f"🧠 RNN Response Generator initialisé")
         print(f"   ├─ Vocabulaire: {self.vocab_size} mots")
         print(f"   ├─ Device: {self.device}")
-        print(f"   ├─ Décodeur: 512 → 1024 → {max(self.vocab_size, 100)}")
-        print(f"   └─ Mode: Génération autonome")
+        print(f"   ├─ Architecture: RNN Encoder → Transformer Decoder (6L)")
+        print(f"   ├─ Params: {self.hybrid_model.num_params:,}")
+        print(f"   └─ Mode: Génération autoregressive")
     
     def _load_vocab(self) -> Dict:
         """Charge le vocabulaire depuis vocab.json"""
@@ -95,7 +104,7 @@ class RNNResponseGenerator:
         temperature: float = 0.8
     ) -> str:
         """
-        Génère une réponse avec le RNN
+        Génère une réponse avec l'architecture hybride RNN-Transformer
         
         Args:
             message: Message de l'utilisateur
@@ -105,13 +114,14 @@ class RNNResponseGenerator:
             temperature: Contrôle la créativité (0.5=conservateur, 1.0=créatif)
         """
         
-        # [1] Encoder le message
+        # [1] Encoder le message en tokens
         input_sequence = self._encode_message(message)
+        input_tokens = self._message_to_tokens(message)
         
         # [2] Obtenir le contexte émotionnel
         emotional_context = self._extract_emotional_context(limbic_filter)
         
-        # [3] Traiter via le cortex textuel
+        # [3] Traiter via le cortex textuel (RNN Encoder)
         try:
             neural_output, metadata = self.textual_cortex.process_text_sequence(
                 input_sequence,
@@ -119,12 +129,13 @@ class RNNResponseGenerator:
                 use_persistent_state=True
             )
             
-            # [4] Générer la réponse token par token
+            # [4] Générer la réponse avec Transformer Decoder
             response = self._generate_response(
                 neural_output, 
                 context=context,
                 max_length=max_length,
-                temperature=temperature
+                temperature=temperature,
+                input_tokens=input_tokens
             )
             
             # [5] Post-traitement
@@ -141,6 +152,35 @@ class RNNResponseGenerator:
             import traceback
             traceback.print_exc()
             return self._fallback_response(message, context)
+    
+    def _message_to_tokens(self, message: str) -> torch.Tensor:
+        """
+        Convertit un message en tokens (indices) pour le transformer
+        
+        Args:
+            message: Message texte
+        
+        Returns:
+            Tensor de tokens (1, seq_len)
+        """
+        words = message.lower().split()
+        
+        # Convertir en indices
+        indices = []
+        for word in words:
+            idx = self.word_to_idx.get(word, self.word_to_idx.get("<unk>", 1))
+            indices.append(idx)
+        
+        # Limiter la longueur
+        if len(indices) > 50:
+            indices = indices[:50]
+        
+        # Si vide, utiliser <unk>
+        if not indices:
+            indices = [1]
+        
+        # Créer le tensor (1, seq_len)
+        return torch.LongTensor(indices).unsqueeze(0).to(self.device)
     
     def _encode_message(self, message: str) -> torch.Tensor:
         """
@@ -192,91 +232,76 @@ class RNNResponseGenerator:
     
     def _decode_tokens(
         self, 
-        neural_output: torch.Tensor, 
+        src_tokens: torch.Tensor,
         max_length: int = 50,
         temperature: float = 0.8
     ) -> str:
         """
-        Décode la sortie neuronale en texte token par token
+        Décode avec l'architecture hybride RNN-Transformer
         
         Args:
-            neural_output: Sortie du RNN (batch, seq_len, 512)
+            src_tokens: Tokens d'entrée (batch, seq_len) pour encoder avec le RNN
             max_length: Nombre maximum de tokens à générer
             temperature: Contrôle la créativité (0.5=conservateur, 1.5=créatif)
             
         Returns:
-            Texte généré token par token
+            Texte généré token par token avec le transformer decoder
         """
         
         # Vérifier que le vocabulaire est disponible
         if self.vocab_size < 2:
             return ""  # Pas de vocabulaire, pas de décodage possible
         
-        tokens = []
+        # Tokens spéciaux
+        start_token = self.word_to_idx.get("<sos>", 1)
+        end_token = self.word_to_idx.get("<eos>", 2)
         
-        # Prendre la représentation moyenne de la séquence
-        # Shape: (batch, seq_len, 512) → (batch, 512) → (512,)
-        if neural_output.dim() == 3:
-            current_state = torch.mean(neural_output, dim=1)  # Moyenne sur la séquence
-        else:
-            current_state = neural_output
-        
-        # S'assurer que c'est (1, 512)
-        if current_state.dim() == 1:
-            current_state = current_state.unsqueeze(0)
-        
-        # Générer token par token
-        for i in range(max_length):
-            # Prédire le prochain token
-            logits = self.decoder(current_state)  # (1, vocab_size)
+        try:
+            # Générer avec l'architecture hybride RNN-Transformer
+            with torch.no_grad():
+                token_ids = self.hybrid_model.generate(
+                    src=src_tokens,
+                    start_token=start_token,
+                    end_token=end_token,
+                    max_length=max_length,
+                    temperature=temperature,
+                    top_k=50,
+                    top_p=0.9
+                )
             
-            # Appliquer la température pour la créativité
-            logits = logits / max(temperature, 0.1)  # Éviter division par 0
+            # Convertir les IDs en mots
+            tokens = []
+            for token_id in token_ids:
+                if token_id == end_token or token_id == start_token:
+                    continue
+                    
+                word = self.idx_to_word.get(str(token_id), None)
+                
+                # Ajouter seulement les vrais mots
+                if word and word not in ["<pad>", "<unk>", "<eos>", "<sos>", "<bos>"]:
+                    tokens.append(word)
             
-            # Échantillonner selon les probabilités
-            probs = torch.exp(logits)
-            probs = probs / torch.sum(probs, dim=-1, keepdim=True)  # Normaliser
+            # Joindre les tokens
+            decoded_text = " ".join(tokens)
             
-            try:
-                token_idx = torch.multinomial(probs[0], num_samples=1).item()
-            except:
-                # Fallback: prendre le token le plus probable
-                token_idx = torch.argmax(probs[0]).item()
+            return decoded_text if decoded_text.strip() else ""
             
-            # Arrêter si token de fin ou padding
-            if token_idx == self.word_to_idx.get("<eos>", -1):
-                break
-            
-            # Convertir l'index en mot
-            word = self.idx_to_word.get(str(token_idx), None)
-            
-            # Ajouter le token seulement si c'est un vrai mot
-            if word and word not in ["<pad>", "<unk>", "<eos>", "<bos>"]:
-                tokens.append(word)
-            
-            # Arrêter si on a assez de tokens valides
-            if len(tokens) >= 3 and i >= 5:
-                # Au moins 3 mots et au moins 5 itérations
-                break
-        
-        # Joindre les tokens
-        decoded_text = " ".join(tokens)
-        
-        # Si le décodage a échoué, retourner vide
-        if len(decoded_text.strip()) == 0:
+        except Exception as e:
+            print(f"⚠️ Erreur décodage transformer: {e}")
+            import traceback
+            traceback.print_exc()
             return ""
-        
-        return decoded_text
     
     def _generate_response(
         self,
         neural_output: torch.Tensor,
         context: Optional[Dict] = None,
         max_length: int = 50,
-        temperature: float = 0.8
+        temperature: float = 0.8,
+        input_tokens: Optional[torch.Tensor] = None
     ) -> str:
         """
-        Génère une réponse intelligente basée sur la sortie neuronale
+        Génère une réponse intelligente avec l'architecture hybride RNN-Transformer
         Essaie le décodage neuronal d'abord, puis utilise les templates
         """
         
@@ -284,25 +309,25 @@ class RNNResponseGenerator:
         message = context.get("current_message", "") if context else ""
         memories = context.get("personal_memory", []) if context else []
         
-        # [1] TENTATIVE: Décodage neuronal token-par-token
+        # [1] TENTATIVE: Décodage neuronal avec Transformer Decoder
         # ⚠️ Désactivé pour l'instant car le modèle n'est pas entraîné
         # Le décodage neuronal sera activé quand le modèle sera entraîné sur de vraies données
         use_neural_decoding = False  # À mettre à True après entraînement
         
-        if use_neural_decoding and self.vocab_size > 100:
+        if use_neural_decoding and self.vocab_size > 100 and input_tokens is not None:
             try:
                 neural_response = self._decode_tokens(
-                    neural_output,
+                    src_tokens=input_tokens,
                     max_length=max_length,
                     temperature=temperature
                 )
                 
                 # Si le décodage a produit une réponse valide (>2 mots), l'utiliser
                 if neural_response and len(neural_response.split()) >= 2:
-                    print(f"🧠 Décodage neuronal: '{neural_response}' (activation={activation:.3f})")
+                    print(f"🧠 Décodage transformer: '{neural_response}' (activation={activation:.3f})")
                     return neural_response
             except Exception as e:
-                print(f"⚠️ Décodage neuronal échoué: {e}, fallback sur templates")
+                print(f"⚠️ Décodage transformer échoué: {e}, fallback sur templates")
         
         # [2] FALLBACK: Détection d'intention + templates structurés
         intent = self._detect_intent(message)

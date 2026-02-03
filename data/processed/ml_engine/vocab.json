@@ -594,7 +594,19 @@
     "t'inquette": 591,
     "uwu": 592,
     "raptor_,": 593,
-    "boucle!": 594
+    "boucle!": 594,
+    "boucle": 595,
+    "encore!!!!!": 596,
+    "raptor_!": 597,
+    "t'appel": 598,
+    "souvien": 599,
+    "dite": 600,
+    "mloeincoesln": 601,
+    "entrainer": 602,
+    "reflechie": 603,
+    "pk": 604,
+    "oui,": 605,
+    "t'entrenais": 606
   },
   "idx_to_word": {
     "0": "<pad>",
@@ -1191,8 +1203,20 @@
     "591": "t'inquette",
     "592": "uwu",
     "593": "raptor_,",
-    "594": "boucle!"
+    "594": "boucle!",
+    "595": "boucle",
+    "596": "encore!!!!!",
+    "597": "raptor_!",
+    "598": "t'appel",
+    "599": "souvien",
+    "600": "dite",
+    "601": "mloeincoesln",
+    "602": "entrainer",
+    "603": "reflechie",
+    "604": "pk",
+    "605": "oui,",
+    "606": "t'entrenais"
   },
   "vocab_size": 2000,
-  "next_idx": 595
+  "next_idx": 607
 }
