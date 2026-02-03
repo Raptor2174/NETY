@@ -270,6 +270,7 @@ class RNNResponseGenerator:
         
         try:
             # Générer avec l'architecture hybride RNN-Transformer
+            self.hybrid_model.eval()  # Mettre le modèle en mode évaluation
             with torch.no_grad():
                 token_ids = self.hybrid_model.generate(
                     src=src_tokens,
