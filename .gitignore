@@ -74,6 +74,8 @@ logs/
 *~
 .cache/
 tmp/
+config_test.json
+test_preprocessor/
 
 # NETY temporary communication files
 tmp_to_nety.txt
