@@ -47,15 +47,10 @@ htmlcov/
 .tox/
 
 # Models and data (large files)
-*.h5
-*.pkl
-*.pth
-*.ckpt
 *.pb
 data/models/
 data/raw/
 # data/processed/ (desactivé temporairement pour le dev)
-hybrid_model.pt
 
 # Databases (local development)
 data/databases/
@@ -88,8 +83,15 @@ tmp_from_dashboard.txt
 .env
 .env.exemple
 
-# les modeles téléchargés
-models/
+# les modeles téléchargés (fichiers binaires lourds)
+# Mais on garde le code source dans nety/models/
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.pkl
+# Ignorer répertoire racine models/ pour les modèles téléchargés
+/models/
 
 #netoyage de la racine du projet
 .flake8
