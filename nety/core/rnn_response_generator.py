@@ -68,6 +68,18 @@ class RNNResponseGenerator:
             device=self.device
         ).to(self.device)
         
+        # Charger le modèle entraîné si disponible
+        hybrid_model_path = os.path.join(self.data_dir, "hybrid_model.pt")
+        if os.path.exists(hybrid_model_path):
+            try:
+                state_dict = torch.load(hybrid_model_path, map_location=self.device)
+                self.hybrid_model.load_state_dict(state_dict)
+                print("✅ Modèle hybride RNN-Transformer entraîné chargé")
+            except Exception as e:
+                print(f"⚠️ Impossible de charger le modèle hybride: {e}")
+        else:
+            print("⚠️ Aucun modèle hybride entraîné trouvé")
+        
         print(f"🧠 RNN Response Generator initialisé")
         print(f"   ├─ Vocabulaire: {self.vocab_size} mots")
         print(f"   ├─ Device: {self.device}")
@@ -312,7 +324,7 @@ class RNNResponseGenerator:
         # [1] TENTATIVE: Décodage neuronal avec Transformer Decoder
         # ⚠️ Désactivé pour l'instant car le modèle n'est pas entraîné
         # Le décodage neuronal sera activé quand le modèle sera entraîné sur de vraies données
-        use_neural_decoding = False  # À mettre à True après entraînement
+        use_neural_decoding = True  # À mettre à True après entraînement
         
         if use_neural_decoding and self.vocab_size > 100 and input_tokens is not None:
             try:
@@ -574,15 +586,21 @@ class RNNResponseGenerator:
         return greetings[idx]
 
     def _respond_generic(self, context: Optional[Dict], activation: float) -> str:
-        """Réponse générique contextuelle"""
+        """Réponse générique contextuelle VARIÉE"""
         responses = [
             "Je comprends. Peux-tu m'en dire plus ?",
             "Intéressant ! Continue.",
             "Je vois. Qu'en penses-tu ?",
             "D'accord. Et ensuite ?",
             "Je note ça. Autre chose ?",
+            "Fascinant ! Raconte-moi la suite.",
+            "Je suis curieux d'en savoir plus.",
+            "Hmm, c'est un point intéressant.",
+            "Je réfléchis à ça. Continue ton idée.",
+            "Ah oui ? Et comment tu te sens par rapport à ça ?",
         ]
         
+        # Choisir ALÉATOIREMENT (pas toujours la même)
         import random
         return random.choice(responses)
 
@@ -654,6 +672,11 @@ class RNNResponseGenerator:
             "Je vois. Qu'en penses-tu ?",
             "D'accord. Et ensuite ?",
             "Je note ça. Autre chose ?",
+            "Fascinant ! Raconte-moi la suite.",
+            "Je suis curieux d'en savoir plus.",
+            "Hmm, c'est un point intéressant.",
+            "Je réfléchis à ça. Continue ton idée.",
+            "Ah oui ? Et comment tu te sens par rapport à ça ?",
         ]
         
         # Choisir un template basé sur le hash du contexte
