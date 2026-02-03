@@ -105,7 +105,7 @@ class Brain:
         if len(self.context_history) > 100:
             self.context_history = self.context_history[-100:]
         
-        return response
+        return self.ml_engine.generate_response(message)
     
     def _identify_user(self) -> Optional[str]:
         """Identifie l'utilisateur basé sur les key_info.jsonl"""
