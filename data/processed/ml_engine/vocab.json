@@ -578,7 +578,23 @@
     "chats": 575,
     "chats,": 576,
     "veirter": 577,
-    "imuable": 578
+    "imuable": 578,
+    "sent": 579,
+    "sensser": 580,
+    "bin": 581,
+    "vient": 582,
+    "ou?": 583,
+    "continnuer": 584,
+    "apprand": 585,
+    "actuelement": 586,
+    "semble": 587,
+    "point...": 588,
+    "deacctiver": 589,
+    "deactiver,": 590,
+    "t'inquette": 591,
+    "uwu": 592,
+    "raptor_,": 593,
+    "boucle!": 594
   },
   "idx_to_word": {
     "0": "<pad>",
@@ -1159,8 +1175,24 @@
     "575": "chats",
     "576": "chats,",
     "577": "veirter",
-    "578": "imuable"
+    "578": "imuable",
+    "579": "sent",
+    "580": "sensser",
+    "581": "bin",
+    "582": "vient",
+    "583": "ou?",
+    "584": "continnuer",
+    "585": "apprand",
+    "586": "actuelement",
+    "587": "semble",
+    "588": "point...",
+    "589": "deacctiver",
+    "590": "deactiver,",
+    "591": "t'inquette",
+    "592": "uwu",
+    "593": "raptor_,",
+    "594": "boucle!"
   },
   "vocab_size": 2000,
-  "next_idx": 579
+  "next_idx": 595
 }

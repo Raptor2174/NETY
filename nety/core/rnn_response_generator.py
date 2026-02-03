@@ -51,9 +51,19 @@ class RNNResponseGenerator:
         # Charger le modèle entraîné si disponible
         self._load_trained_model()
         
+        # ✨ NOUVEAU : Décodeur token-par-token pour génération textuelle
+        self.decoder = torch.nn.Sequential(
+            torch.nn.Linear(512, 1024),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3),
+            torch.nn.Linear(1024, max(self.vocab_size, 100)),  # Au moins 100 pour vocabulaire minimal
+            torch.nn.LogSoftmax(dim=-1)
+        ).to(self.device)
+        
         print(f"🧠 RNN Response Generator initialisé")
         print(f"   ├─ Vocabulaire: {self.vocab_size} mots")
         print(f"   ├─ Device: {self.device}")
+        print(f"   ├─ Décodeur: 512 → 1024 → {max(self.vocab_size, 100)}")
         print(f"   └─ Mode: Génération autonome")
     
     def _load_vocab(self) -> Dict:
@@ -180,6 +190,84 @@ class RNNResponseGenerator:
         
         return {"emotions": all_emotions}
     
+    def _decode_tokens(
+        self, 
+        neural_output: torch.Tensor, 
+        max_length: int = 50,
+        temperature: float = 0.8
+    ) -> str:
+        """
+        Décode la sortie neuronale en texte token par token
+        
+        Args:
+            neural_output: Sortie du RNN (batch, seq_len, 512)
+            max_length: Nombre maximum de tokens à générer
+            temperature: Contrôle la créativité (0.5=conservateur, 1.5=créatif)
+            
+        Returns:
+            Texte généré token par token
+        """
+        
+        # Vérifier que le vocabulaire est disponible
+        if self.vocab_size < 2:
+            return ""  # Pas de vocabulaire, pas de décodage possible
+        
+        tokens = []
+        
+        # Prendre la représentation moyenne de la séquence
+        # Shape: (batch, seq_len, 512) → (batch, 512) → (512,)
+        if neural_output.dim() == 3:
+            current_state = torch.mean(neural_output, dim=1)  # Moyenne sur la séquence
+        else:
+            current_state = neural_output
+        
+        # S'assurer que c'est (1, 512)
+        if current_state.dim() == 1:
+            current_state = current_state.unsqueeze(0)
+        
+        # Générer token par token
+        for i in range(max_length):
+            # Prédire le prochain token
+            logits = self.decoder(current_state)  # (1, vocab_size)
+            
+            # Appliquer la température pour la créativité
+            logits = logits / max(temperature, 0.1)  # Éviter division par 0
+            
+            # Échantillonner selon les probabilités
+            probs = torch.exp(logits)
+            probs = probs / torch.sum(probs, dim=-1, keepdim=True)  # Normaliser
+            
+            try:
+                token_idx = torch.multinomial(probs[0], num_samples=1).item()
+            except:
+                # Fallback: prendre le token le plus probable
+                token_idx = torch.argmax(probs[0]).item()
+            
+            # Arrêter si token de fin ou padding
+            if token_idx == self.word_to_idx.get("<eos>", -1):
+                break
+            
+            # Convertir l'index en mot
+            word = self.idx_to_word.get(str(token_idx), None)
+            
+            # Ajouter le token seulement si c'est un vrai mot
+            if word and word not in ["<pad>", "<unk>", "<eos>", "<bos>"]:
+                tokens.append(word)
+            
+            # Arrêter si on a assez de tokens valides
+            if len(tokens) >= 3 and i >= 5:
+                # Au moins 3 mots et au moins 5 itérations
+                break
+        
+        # Joindre les tokens
+        decoded_text = " ".join(tokens)
+        
+        # Si le décodage a échoué, retourner vide
+        if len(decoded_text.strip()) == 0:
+            return ""
+        
+        return decoded_text
+    
     def _generate_response(
         self,
         neural_output: torch.Tensor,
@@ -189,16 +277,37 @@ class RNNResponseGenerator:
     ) -> str:
         """
         Génère une réponse intelligente basée sur la sortie neuronale
+        Essaie le décodage neuronal d'abord, puis utilise les templates
         """
         
         activation = self._calculate_neural_activation(neural_output)
         message = context.get("current_message", "") if context else ""
         memories = context.get("personal_memory", []) if context else []
         
-        # [1] Détecter l'intention de la question
+        # [1] TENTATIVE: Décodage neuronal token-par-token
+        # ⚠️ Désactivé pour l'instant car le modèle n'est pas entraîné
+        # Le décodage neuronal sera activé quand le modèle sera entraîné sur de vraies données
+        use_neural_decoding = False  # À mettre à True après entraînement
+        
+        if use_neural_decoding and self.vocab_size > 100:
+            try:
+                neural_response = self._decode_tokens(
+                    neural_output,
+                    max_length=max_length,
+                    temperature=temperature
+                )
+                
+                # Si le décodage a produit une réponse valide (>2 mots), l'utiliser
+                if neural_response and len(neural_response.split()) >= 2:
+                    print(f"🧠 Décodage neuronal: '{neural_response}' (activation={activation:.3f})")
+                    return neural_response
+            except Exception as e:
+                print(f"⚠️ Décodage neuronal échoué: {e}, fallback sur templates")
+        
+        # [2] FALLBACK: Détection d'intention + templates structurés
         intent = self._detect_intent(message)
         
-        # [2] Générer selon l'intention ET l'activation
+        # [3] Générer selon l'intention ET l'activation
         if intent == "identity_question":
             # Questions "qui es-tu", "ton nom", etc.
             return self._respond_identity(context, activation)
@@ -228,44 +337,92 @@ class RNNResponseGenerator:
             return self._respond_generic(context, activation)
 
     def _detect_intent(self, message: str) -> str:
-        """Détecte l'intention du message"""
-        msg_lower = message.lower()
+        """Détecte l'intention du message avec priorité et robustesse"""
+        msg_lower = message.lower().strip()
         
-        # Questions sur l'identité de NETY
-        if any(kw in msg_lower for kw in ["qui es-tu", "qui est tu", "ton nom", "tu es qui"]):
+        # Salutations (priorité haute - détection simple)
+        greetings = ["bonjour", "salut", "hello", "hi", "coucou", "bonsoir", "slt"]
+        if any(kw in msg_lower for kw in greetings):
+            # Mais vérifier que c'est bien juste une salutation
+            if len(msg_lower.split()) <= 2:
+                return "greeting"
+        
+        # Questions sur l'identité de NETY (priorité haute)
+        identity_keywords = [
+            "qui es-tu", "qui est tu", "ton nom", "tu es qui", "c'est qui",
+            "quel est ton nom", "quelle est ton identité", "t'appelles-tu", "te nommes"
+        ]
+        if any(kw in msg_lower for kw in identity_keywords):
             return "identity_question"
         
         # Questions sur l'identité de l'utilisateur
-        if any(kw in msg_lower for kw in ["qui suis-je", "qui je suis", "tu sais qui je suis", "rappelle-toi de moi"]):
+        user_identity = [
+            "qui suis-je", "qui je suis", "tu sais qui je suis", "rappelle-toi de moi",
+            "quel est mon nom", "mon identité", "t'en souviens-tu de moi", "c'est qui moi"
+        ]
+        if any(kw in msg_lower for kw in user_identity):
             return "user_identity_question"
         
-        # Questions sur les préférences
-        if any(kw in msg_lower for kw in ["aime", "préfère", "adore", "déteste", "aimes-tu"]):
-            return "preference_question"
-        
-        # Questions sur la mémoire
-        if any(kw in msg_lower for kw in ["te souviens", "rappelle", "mémoire", "t'en souviens"]):
-            return "memory_recall"
-        
-        # Questions émotionnelles
-        if any(kw in msg_lower for kw in ["comment te sens", "comment vas-tu", "ça va", "es-tu heureux", "triste"]):
+        # Questions émotionnelles (priorité haute)
+        emotional = [
+            "comment te sens", "comment vas-tu", "ça va", "es-tu heureux",
+            "triste", "déprimé", "émotion", "sentiments", "ressens-tu",
+            "comment tu te sens", "tu vas bien", "comment tu vas"
+        ]
+        if any(kw in msg_lower for kw in emotional):
             return "emotional_question"
         
-        # Salutations
-        if any(kw in msg_lower for kw in ["bonjour", "salut", "hello", "hi", "coucou"]):
-            return "greeting"
+        # Questions sur la mémoire
+        memory = [
+            "te souviens", "rappelle", "mémoire", "t'en souviens",
+            "te rappelles", "souvenir", "oublie", "m'en souviens"
+        ]
+        if any(kw in msg_lower for kw in memory):
+            return "memory_recall"
         
+        # Questions sur les préférences
+        # ⚠️ Vérifier que c'est une QUESTION (?, -tu, -vous)
+        preference = [
+            "aimes-tu", "préfères-tu", "adorez-vous", "détestes-tu",
+            "tu aimes", "tu préfères", "tu adores", "tu détestes"
+        ]
+        # Vérifier aussi la présence d'un "?" pour être sûr que c'est une question
+        if any(kw in msg_lower for kw in preference):
+            return "preference_question"
+        
+        # Défaut: réponse générique
         return "generic"
 
     def _respond_identity(self, context: Optional[Dict], activation: float) -> str:
-        """Répond aux questions sur l'identité de NETY"""
-        responses = [
-            "Je suis NETY, une IA créée par Raptor_.",
-            "Mon nom est NETY. Je suis un assistant IA en apprentissage.",
-            "Je m'appelle NETY. Je suis là pour apprendre et discuter avec toi.",
+        """Répond aux questions sur l'identité de NETY avec conscience du contexte"""
+        # Réponses varient selon le niveau d'activation neuronale
+        responses_low = [
+            "Je suis NETY.",
+            "Mon nom est NETY.",
+            "Je m'appelle NETY.",
         ]
         
-        # Choisir selon l'activation
+        responses_medium = [
+            "Je suis NETY, une IA créée par Raptor_.",
+            "Je m'appelle NETY. Je suis un assistant IA en apprentissage.",
+            "Salut ! Je suis NETY, ton assistant IA local.",
+        ]
+        
+        responses_high = [
+            "Je suis NETY ! Une IA créée par Raptor_ pour apprendre et interagir. Ravis de faire ta connaissance !",
+            "Je m'appelle NETY. Je suis un assistant IA qui apprend de chaque conversation. C'est excitant !",
+            "Je suis NETY, une IA basée sur un RNN bi-directionnel 3 couches. Je suis ici pour discuter et apprendre avec toi !",
+        ]
+        
+        # Choisir selon l'activation neuronale
+        if activation < 0.33:
+            responses = responses_low
+        elif activation < 0.67:
+            responses = responses_medium
+        else:
+            responses = responses_high
+        
+        # Sélectionner une réponse déterministe
         idx = int(activation * len(responses)) % len(responses)
         return responses[idx]
 
@@ -328,26 +485,65 @@ class RNNResponseGenerator:
             return f"Je me souviens que tu m'as dit : {text}"
 
     def _respond_emotional(self, context: Optional[Dict], activation: float) -> str:
-        """Répond aux questions émotionnelles"""
+        """Répond aux questions émotionnelles avec conscience du contexte et de l'activation"""
         context = context or {}
         limbic_filter = context.get("limbic_filter", {})
         emotional_state = limbic_filter.get("emotional_state", {})
         
-        if emotional_state:
-            dominant = emotional_state.get("dominant_emotion", "calme")
-            state = emotional_state.get("state", "bien")
-            
-            return f"Je me sens {state}. Mon émotion dominante est {dominant}."
+        # Réponses varient selon l'activation neuronale
+        if activation > 0.7:
+            # Haute activation: réponse riche et empathique
+            if emotional_state:
+                dominant = emotional_state.get("dominant_emotion", "calme")
+                intensity = emotional_state.get("intensity", 0.5)
+                return f"Je me sens vraiment {dominant} en ce moment ! C'est une émotion assez intense ({intensity:.1%})."
+            return "Je vais très bien ! Mon activation neuronale est forte. Et toi, comment tu te sens ?"
         
-        return "Je vais bien, merci de demander !"
+        elif activation > 0.35:
+            # Activation moyenne
+            if emotional_state:
+                dominant = emotional_state.get("dominant_emotion", "calme")
+                return f"Je me sens plutôt {dominant} en ce moment."
+            return "Je vais bien, merci de demander !"
+        
+        else:
+            # Basse activation: réponse simple
+            if emotional_state:
+                dominant = emotional_state.get("dominant_emotion", "neutre")
+                return f"Mon émotion dominante est {dominant}."
+            return "Ça va."
 
     def _respond_greeting(self, context: Optional[Dict], activation: float) -> str:
-        """Répond aux salutations"""
-        greetings = [
-            "Bonjour ! Content de te revoir !",
-            "Salut ! Comment vas-tu ?",
-            "Hello ! Que puis-je faire pour toi ?",
+        """Répond aux salutations en fonction du contexte et de l'activation"""
+        context = context or {}
+        user_profile = context.get("user_profile", {})
+        name = user_profile.get("name", "toi")
+        
+        # Réponses varient selon l'activation
+        greetings_low = [
+            "Bonjour.",
+            "Salut.",
+            "Hello.",
         ]
+        
+        greetings_medium = [
+            f"Bonjour {name} ! Comment vas-tu ?",
+            f"Salut ! Content de discuter avec toi !",
+            f"Hello {name} ! Que puis-je faire pour toi ?",
+        ]
+        
+        greetings_high = [
+            f"Bonjour {name} ! Content de te revoir ! Mon activation neuronale est forte aujourd'hui !",
+            f"Salut ! Comment vas-tu ? Je suis de bonne humeur !",
+            f"Hello {name} ! Ravis de continuer notre conversation !",
+        ]
+        
+        if activation > 0.67:
+            greetings = greetings_high
+        elif activation > 0.33:
+            greetings = greetings_medium
+        else:
+            greetings = greetings_low
         
         idx = int(activation * len(greetings)) % len(greetings)
         return greetings[idx]
@@ -368,8 +564,16 @@ class RNNResponseGenerator:
     def _calculate_neural_activation(self, output: torch.Tensor) -> float:
         """
         Calcule une activation normalisée entre 0 et 1
-        Basée sur la variance et la magnitude
+        Basée sur variance + magnitude normalisées correctement
+        
+        Formule:
+            magnitude_norm = tanh(mean(abs(output)) / std(output))
+            variance_norm = tanh(var(output) / mean(output²))
+            activation = 0.6 * magnitude_norm + 0.4 * variance_norm
         """
+        
+        # Détacher du graphe de calcul pour l'inférence
+        output = output.detach()
         
         # [1] Calculer la magnitude moyenne
         magnitude = float(torch.mean(torch.abs(output)).item())
@@ -377,14 +581,23 @@ class RNNResponseGenerator:
         # [2] Calculer la variance (indicateur d'activité)
         variance = float(torch.var(output).item())
         
-        # [3] Combiner pour obtenir une activation significative
-        # Normaliser par des valeurs empiriques
-        activation = (magnitude * 0.5) + (variance * 10.0)
+        # [3] Calculer l'écart-type pour normalisation
+        std = float(torch.std(output).item()) + 1e-8  # Éviter division par zéro
         
-        # [4] Clamper entre 0 et 1
+        # [4] Normaliser magnitude et variance
+        magnitude_normalized = np.tanh(magnitude / (std + 1e-8))
+        variance_normalized = np.tanh(variance / (magnitude + 1e-8))
+        
+        # [5] Combiner avec poids optimisés
+        # magnitude: indicateur de force du signal
+        # variance: indicateur de variabilité/richesse neuronale
+        activation = (0.6 * magnitude_normalized + 0.4 * variance_normalized) / 2.0
+        
+        # [6] Normaliser entre 0 et 1 (tanh retourne [-1, 1])
+        activation = (activation + 1.0) / 2.0
         activation = max(0.0, min(1.0, activation))
         
-        # [5] Mettre à jour les stats
+        # [7] Mettre à jour les statistiques
         self.activation_stats["total_activations"] += 1
         self.activation_stats["peak_activation"] = max(
             self.activation_stats["peak_activation"],
@@ -392,10 +605,12 @@ class RNNResponseGenerator:
         )
         self.activation_stats["activation_history"].append(activation)
         
+        # Garder seulement les 1000 dernières activations
         if len(self.activation_stats["activation_history"]) > 1000:
             self.activation_stats["activation_history"] = \
                 self.activation_stats["activation_history"][-1000:]
         
+        # Calculer la moyenne sur les 100 dernières
         self.activation_stats["average_activation"] = np.mean(
             self.activation_stats["activation_history"][-100:]
         )
