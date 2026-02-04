@@ -1,0 +1,6 @@
+{
+  "vocab_size": 50000,
+  "max_length": 256,
+  "lowercase": true,
+  "remove_accents": false
+}
