@@ -521,6 +521,7 @@ class NETYBrainV2(nn.Module):
         target_attention_mask: Optional[torch.Tensor] = None,
         teacher_forcing_ratio: float = 1.0
     ) -> Dict[str, torch.Tensor]:
+        
         """
         Forward pass complet (mode training)
         
@@ -579,7 +580,7 @@ class NETYBrainV2(nn.Module):
             )
             
             all_logits.append(output_logits)
-            if attention_weights is not None:
+            if attention_weights is not None and all_attention_weights is not None:
                 all_attention_weights.append(attention_weights)
             
             # Teacher forcing
